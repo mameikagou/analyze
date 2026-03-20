@@ -23,5 +23,8 @@ output/
 # OS
 .DS_Store
 
+# Database
+*.db
+
 # Env
 .env

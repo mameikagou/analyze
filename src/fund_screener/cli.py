@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import logging
 import sys
-from datetime import date
 from pathlib import Path
 
 import click
@@ -33,6 +32,7 @@ from fund_screener.fetchers.us_etf import USETFFetcher
 from fund_screener.models import FundInfo, Market, ScreeningSummary
 from fund_screener.reporter import generate_report
 from fund_screener.screener import calculate_trend_stats, screen_fund
+from fund_screener.storage import DataStore
 
 logger = logging.getLogger("fund_screener")
 
@@ -90,6 +90,7 @@ def _create_fetchers(
 def _process_market(
     fetcher: BaseFetcher,
     config: AppConfig,
+    store: DataStore | None = None,
 ) -> tuple[list[FundInfo], ScreeningSummary]:
     """
     处理单个市场的完整流程：获取列表 → 筛选 → 获取持仓。
@@ -147,6 +148,10 @@ def _process_market(
             market=market, total_scanned=0, total_passed=0, pass_rate=0.0,
         )
 
+    # 注入点 1: 持久化基金列表到数据湖
+    if store is not None:
+        store.persist_fund_list(market.value, fund_list)
+
     logger.info("%s 共 %d 只基金，开始筛选...", label, len(fund_list))
 
     # Step 2: 遍历每只基金，拉净值 → MA 筛选
@@ -164,6 +169,10 @@ def _process_market(
             if nav_df.empty:
                 continue
 
+            # 注入点 2: 全量持久化净值历史（MA 筛选之前，不管是否通过都存）
+            if store is not None:
+                store.persist_nav_records(market.value, code, nav_df)
+
             # MA 筛选
             result = screen_fund(nav_df, config.ma_short, config.ma_long)
             if result is None or not result.passed:
@@ -174,6 +183,10 @@ def _process_market(
 
             holdings = fetcher.fetch_holdings(code)
             sectors = fetcher.fetch_sector_exposure(code)
+
+            # 注入点 3: 持久化持仓和行业分布
+            if store is not None:
+                store.persist_holdings(market.value, code, holdings, sectors)
 
             # 计算多周期涨跌幅（从已有 nav_df 直接算，零额外请求）
             trend_stats = calculate_trend_stats(nav_df)
@@ -216,6 +229,10 @@ def _process_market(
                 trend_stats=trend_stats,
                 data_date=latest_date,
             )
+            # 注入点 4: 持久化筛选结果
+            if store is not None:
+                store.persist_screening_result(fund)
+
             passed_funds.append(fund)
 
         except Exception as e:
@@ -239,6 +256,76 @@ def _process_market(
     return passed_funds, summary
 
 
+def _print_db_stats(config: AppConfig) -> None:
+    """
+    打印数据湖统计信息 — 直观展示数据湖全貌。
+
+    把枯燥的 SQL 查询结果格式化成人类友好的表格输出。
+    """
+    db_path = config.db_path
+    if not Path(db_path).exists():
+        click.echo(f"数据库文件不存在: {db_path}")
+        click.echo("请先运行一次筛选（不带 --no-store）来初始化数据湖。")
+        return
+
+    with DataStore(db_path) as store:
+        stats = store.get_stats()
+
+    click.echo()
+    click.echo("=" * 55)
+    click.echo("  数据湖统计  ".center(55, "="))
+    click.echo("=" * 55)
+    click.echo(f"  数据库路径: {db_path}")
+    click.echo(f"  文件大小:   {stats.get('db_size_mb', 0)} MB")
+    click.echo()
+
+    # 各表记录数
+    click.echo("--- 表记录数 ---")
+    table_names = {
+        "funds_count": "基金维度表 (funds)",
+        "nav_records_count": "净值时序 (nav_records)",
+        "holdings_count": "持仓快照 (holdings)",
+        "sector_exposure_count": "行业分布 (sector_exposure)",
+        "screening_results_count": "筛选结果 (screening_results)",
+    }
+    for key, label in table_names.items():
+        click.echo(f"  {label:<35s} {stats.get(key, 0):>8,} 条")
+    click.echo()
+
+    # 按市场维度
+    funds_by_market: dict[str, int] = stats.get("funds_by_market", {})
+    nav_by_market: dict[str, int] = stats.get("nav_by_market", {})
+    if funds_by_market:
+        click.echo("--- 按市场统计 ---")
+        click.echo(f"  {'市场':<10s} {'基金数':>8s} {'净值记录数':>12s}")
+        click.echo(f"  {'----':<10s} {'------':>8s} {'----------':>12s}")
+        for mkt in sorted(set(list(funds_by_market.keys()) + list(nav_by_market.keys()))):
+            f_count = funds_by_market.get(mkt, 0)
+            n_count = nav_by_market.get(mkt, 0)
+            click.echo(f"  {mkt:<10s} {f_count:>8,} {n_count:>12,}")
+        click.echo()
+
+    # 净值时间范围
+    date_min, date_max = stats.get("nav_date_range", (None, None))
+    if date_min:
+        click.echo("--- 净值数据时间范围 ---")
+        click.echo(f"  最早: {date_min}")
+        click.echo(f"  最新: {date_max}")
+        click.echo()
+
+    # 最近筛选记录
+    recent: list[dict[str, object]] = stats.get("recent_screenings", [])
+    if recent:
+        click.echo("--- 最近 5 次筛选 ---")
+        click.echo(f"  {'日期':<14s} {'通过数量':>8s}")
+        click.echo(f"  {'----':<14s} {'------':>8s}")
+        for entry in recent:
+            click.echo(f"  {entry['date']:<14s} {entry['count']:>8,} 只")
+        click.echo()
+
+    click.echo("=" * 55)
+
+
 @click.command()
 @click.option(
     "--config", "config_path",
@@ -259,12 +346,16 @@ def _process_market(
     type=click.Path(),
 )
 @click.option("--no-cache", is_flag=True, help="忽略缓存，强制重新拉取数据")
+@click.option("--no-store", is_flag=True, help="禁用 SQLite 数据湖持久化")
+@click.option("--db-stats", is_flag=True, help="查看数据湖统计信息（不执行筛选）")
 @click.option("--verbose", "-v", is_flag=True, help="输出详细日志")
 def main(
     config_path: str,
     market: str,
     output_path: str | None,
     no_cache: bool,
+    no_store: bool,
+    db_stats: bool,
     verbose: bool,
 ) -> None:
     """
@@ -278,6 +369,12 @@ def main(
 
     # 加载配置
     config = load_config(config_path)
+
+    # --db-stats: 查看数据湖统计信息后直接退出
+    if db_stats:
+        _print_db_stats(config)
+        return
+
     logger.info("配置加载完成: MA%d/MA%d, 回看 %d 天", config.ma_short, config.ma_long, config.lookback_days)
 
     # 初始化缓存
@@ -285,6 +382,14 @@ def main(
     cache = FileCache(config.cache_dir, default_ttl_hours=cache_ttl)
     if no_cache:
         logger.info("缓存已禁用，将强制重新拉取所有数据")
+
+    # 初始化数据湖
+    store: DataStore | None = None
+    if config.store_enabled and not no_store:
+        store = DataStore(config.db_path)
+        logger.info("数据湖已启用: %s", config.db_path)
+    else:
+        logger.info("数据湖已禁用")
 
     # 确定要处理的市场
     if market == "all":
@@ -303,10 +408,14 @@ def main(
     all_funds: list[FundInfo] = []
     all_summaries: list[ScreeningSummary] = []
 
-    for mkt, fetcher in fetchers.items():
-        funds, summary = _process_market(fetcher, config)
+    for _mkt, fetcher in fetchers.items():
+        funds, summary = _process_market(fetcher, config, store=store)
         all_funds.extend(funds)
         all_summaries.append(summary)
+
+    # 关闭数据湖连接
+    if store is not None:
+        store.close()
 
     # 生成报告
     if not all_funds:

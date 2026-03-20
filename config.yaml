@@ -14,6 +14,10 @@ output_dir: "./output"
 cache_dir: "./.cache"
 cache_ttl_hours: 12   # 缓存有效期（小时）
 
+# 数据湖配置
+db_path: "./data/fund_data.db"    # SQLite 数据库路径
+store_enabled: true               # 是否启用持久化数据湖（CLI 可用 --no-store 关闭）
+
 # ---------- A股公募基金 ----------
 cn_fund:
   enabled: true

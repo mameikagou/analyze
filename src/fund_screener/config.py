@@ -62,6 +62,9 @@ class AppConfig(BaseModel):
     cache_dir: str = "./.cache"
     cache_ttl_hours: int = 12
 
+    db_path: str = "./data/fund_data.db"
+    store_enabled: bool = True
+
     cn_fund: CNFundConfig = Field(default_factory=CNFundConfig)
     us_etf: USETFConfig = Field(default_factory=USETFConfig)
     hk_etf: HKETFConfig = Field(default_factory=HKETFConfig)
@@ -94,5 +97,8 @@ def load_config(config_path: str | Path = "config.yaml") -> AppConfig:
     # 确保输出目录和缓存目录存在
     Path(config.output_dir).mkdir(parents=True, exist_ok=True)
     Path(config.cache_dir).mkdir(parents=True, exist_ok=True)
+
+    # 确保数据库文件的父目录存在
+    Path(config.db_path).parent.mkdir(parents=True, exist_ok=True)
 
     return config
