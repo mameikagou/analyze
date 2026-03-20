@@ -1,0 +1,45 @@
+# ==========================================
+# 基金/ETF 趋势筛选器 — 配置文件
+# ==========================================
+
+# 均线参数
+ma_short: 20          # 短期均线周期
+ma_long: 60           # 长期均线周期
+lookback_days: 150    # 拉取历史数据天数（建议 >= ma_long * 2.5）
+
+# 输出配置
+output_dir: "./output"
+
+# 缓存配置
+cache_dir: "./.cache"
+cache_ttl_hours: 12   # 缓存有效期（小时）
+
+# ---------- A股公募基金 ----------
+cn_fund:
+  enabled: true
+  # 筛选的基金类型：股票型、混合型、指数型
+  fund_types:
+    - "股票型"
+    - "混合型"
+    - "指数型"
+  max_funds: 500      # 最多处理多少只（防止跑太久，设 0 不限制）
+
+# ---------- 美股 ETF ----------
+us_etf:
+  enabled: true
+  ticker_source: "data/us_etf_universe.json"
+  # 手动追加的 ticker（配置文件里加，不用改代码）
+  extra_tickers: []
+
+# ---------- 港股 ETF ----------
+hk_etf:
+  enabled: true
+  max_funds: 200
+
+# ---------- 限速配置 ----------
+rate_limit:
+  akshare_delay_sec: 0.5     # akshare 每次请求间隔（底层爬东财，太快被封）
+  yfinance_delay_sec: 0.3    # yfinance 请求间隔
+  etfdb_delay_sec: 1.0       # etfdb 爬虫间隔（更保守）
+  max_retries: 3              # 最大重试次数
+  retry_backoff_sec: 2.0      # 重试退避基数（指数退避）

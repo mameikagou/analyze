@@ -1,0 +1,580 @@
+[
+  {
+    "ticker": "SPY",
+    "name": "SPDR S&P 500 ETF Trust",
+    "sector": "Large Cap Blend",
+    "holdings": [
+      {"code": "AAPL", "name": "Apple Inc", "weight": 7.1},
+      {"code": "MSFT", "name": "Microsoft Corp", "weight": 6.5},
+      {"code": "NVDA", "name": "NVIDIA Corp", "weight": 6.2},
+      {"code": "AMZN", "name": "Amazon.com Inc", "weight": 3.8},
+      {"code": "GOOGL", "name": "Alphabet Inc Class A", "weight": 2.3},
+      {"code": "META", "name": "Meta Platforms Inc", "weight": 2.5},
+      {"code": "BRK.B", "name": "Berkshire Hathaway", "weight": 1.8},
+      {"code": "TSLA", "name": "Tesla Inc", "weight": 1.5},
+      {"code": "UNH", "name": "UnitedHealth Group", "weight": 1.3},
+      {"code": "LLY", "name": "Eli Lilly & Co", "weight": 1.3}
+    ],
+    "sectors": [
+      {"sector": "Technology", "weight": 32.0},
+      {"sector": "Healthcare", "weight": 12.5},
+      {"sector": "Financials", "weight": 12.0},
+      {"sector": "Consumer Discretionary", "weight": 10.5},
+      {"sector": "Communication Services", "weight": 9.0}
+    ]
+  },
+  {
+    "ticker": "QQQ",
+    "name": "Invesco QQQ Trust",
+    "sector": "Large Cap Growth",
+    "holdings": [
+      {"code": "AAPL", "name": "Apple Inc", "weight": 9.2},
+      {"code": "MSFT", "name": "Microsoft Corp", "weight": 8.1},
+      {"code": "NVDA", "name": "NVIDIA Corp", "weight": 7.8},
+      {"code": "AMZN", "name": "Amazon.com Inc", "weight": 5.4},
+      {"code": "META", "name": "Meta Platforms Inc", "weight": 4.8},
+      {"code": "AVGO", "name": "Broadcom Inc", "weight": 4.2},
+      {"code": "GOOGL", "name": "Alphabet Inc", "weight": 2.8},
+      {"code": "TSLA", "name": "Tesla Inc", "weight": 2.6},
+      {"code": "COST", "name": "Costco Wholesale", "weight": 2.5},
+      {"code": "NFLX", "name": "Netflix Inc", "weight": 2.1}
+    ],
+    "sectors": [
+      {"sector": "Technology", "weight": 58.0},
+      {"sector": "Communication Services", "weight": 16.0},
+      {"sector": "Consumer Discretionary", "weight": 13.0},
+      {"sector": "Healthcare", "weight": 6.0}
+    ]
+  },
+  {
+    "ticker": "VTI",
+    "name": "Vanguard Total Stock Market ETF",
+    "sector": "Large Cap Blend",
+    "holdings": [
+      {"code": "AAPL", "name": "Apple Inc", "weight": 6.5},
+      {"code": "MSFT", "name": "Microsoft Corp", "weight": 5.9},
+      {"code": "NVDA", "name": "NVIDIA Corp", "weight": 5.5},
+      {"code": "AMZN", "name": "Amazon.com Inc", "weight": 3.5},
+      {"code": "META", "name": "Meta Platforms Inc", "weight": 2.3}
+    ],
+    "sectors": [
+      {"sector": "Technology", "weight": 30.0},
+      {"sector": "Healthcare", "weight": 13.0},
+      {"sector": "Financials", "weight": 12.5}
+    ]
+  },
+  {
+    "ticker": "VOO",
+    "name": "Vanguard S&P 500 ETF",
+    "sector": "Large Cap Blend",
+    "holdings": [
+      {"code": "AAPL", "name": "Apple Inc", "weight": 7.1},
+      {"code": "MSFT", "name": "Microsoft Corp", "weight": 6.5},
+      {"code": "NVDA", "name": "NVIDIA Corp", "weight": 6.2}
+    ],
+    "sectors": [
+      {"sector": "Technology", "weight": 32.0},
+      {"sector": "Healthcare", "weight": 12.5}
+    ]
+  },
+  {
+    "ticker": "IWM",
+    "name": "iShares Russell 2000 ETF",
+    "sector": "Small Cap Blend",
+    "holdings": [],
+    "sectors": [
+      {"sector": "Healthcare", "weight": 16.0},
+      {"sector": "Industrials", "weight": 16.0},
+      {"sector": "Financials", "weight": 15.0},
+      {"sector": "Technology", "weight": 13.0}
+    ]
+  },
+  {
+    "ticker": "XLK",
+    "name": "Technology Select Sector SPDR Fund",
+    "sector": "Technology",
+    "holdings": [
+      {"code": "AAPL", "name": "Apple Inc", "weight": 16.0},
+      {"code": "MSFT", "name": "Microsoft Corp", "weight": 14.5},
+      {"code": "NVDA", "name": "NVIDIA Corp", "weight": 14.0},
+      {"code": "AVGO", "name": "Broadcom Inc", "weight": 5.2},
+      {"code": "CRM", "name": "Salesforce Inc", "weight": 2.8}
+    ],
+    "sectors": [
+      {"sector": "Technology Hardware", "weight": 35.0},
+      {"sector": "Software", "weight": 30.0},
+      {"sector": "Semiconductors", "weight": 25.0}
+    ]
+  },
+  {
+    "ticker": "XLF",
+    "name": "Financial Select Sector SPDR Fund",
+    "sector": "Financials",
+    "holdings": [
+      {"code": "BRK.B", "name": "Berkshire Hathaway", "weight": 13.5},
+      {"code": "JPM", "name": "JPMorgan Chase", "weight": 10.2},
+      {"code": "V", "name": "Visa Inc", "weight": 7.8},
+      {"code": "MA", "name": "Mastercard Inc", "weight": 6.5},
+      {"code": "BAC", "name": "Bank of America", "weight": 4.2}
+    ],
+    "sectors": [
+      {"sector": "Banks", "weight": 25.0},
+      {"sector": "Financial Services", "weight": 30.0},
+      {"sector": "Insurance", "weight": 20.0}
+    ]
+  },
+  {
+    "ticker": "XLE",
+    "name": "Energy Select Sector SPDR Fund",
+    "sector": "Energy",
+    "holdings": [
+      {"code": "XOM", "name": "Exxon Mobil Corp", "weight": 22.5},
+      {"code": "CVX", "name": "Chevron Corp", "weight": 15.0},
+      {"code": "COP", "name": "ConocoPhillips", "weight": 7.5},
+      {"code": "SLB", "name": "Schlumberger NV", "weight": 5.0},
+      {"code": "EOG", "name": "EOG Resources", "weight": 4.5}
+    ],
+    "sectors": [
+      {"sector": "Oil & Gas", "weight": 70.0},
+      {"sector": "Energy Equipment", "weight": 15.0},
+      {"sector": "Pipeline", "weight": 10.0}
+    ]
+  },
+  {
+    "ticker": "XLV",
+    "name": "Health Care Select Sector SPDR Fund",
+    "sector": "Healthcare",
+    "holdings": [
+      {"code": "LLY", "name": "Eli Lilly & Co", "weight": 11.5},
+      {"code": "UNH", "name": "UnitedHealth Group", "weight": 9.8},
+      {"code": "JNJ", "name": "Johnson & Johnson", "weight": 6.5},
+      {"code": "ABBV", "name": "AbbVie Inc", "weight": 6.2},
+      {"code": "MRK", "name": "Merck & Co", "weight": 5.0}
+    ],
+    "sectors": [
+      {"sector": "Pharmaceuticals", "weight": 35.0},
+      {"sector": "Health Care Equipment", "weight": 20.0},
+      {"sector": "Biotech", "weight": 18.0}
+    ]
+  },
+  {
+    "ticker": "XLI",
+    "name": "Industrial Select Sector SPDR Fund",
+    "sector": "Industrials",
+    "holdings": [
+      {"code": "GE", "name": "GE Aerospace", "weight": 5.0},
+      {"code": "CAT", "name": "Caterpillar Inc", "weight": 4.8},
+      {"code": "RTX", "name": "RTX Corp", "weight": 4.5},
+      {"code": "UNP", "name": "Union Pacific", "weight": 4.2},
+      {"code": "HON", "name": "Honeywell Intl", "weight": 4.0}
+    ],
+    "sectors": [
+      {"sector": "Aerospace & Defense", "weight": 22.0},
+      {"sector": "Machinery", "weight": 18.0},
+      {"sector": "Industrial Conglomerates", "weight": 12.0}
+    ]
+  },
+  {
+    "ticker": "XLP",
+    "name": "Consumer Staples Select Sector SPDR Fund",
+    "sector": "Consumer Staples",
+    "holdings": [
+      {"code": "PG", "name": "Procter & Gamble", "weight": 14.0},
+      {"code": "COST", "name": "Costco Wholesale", "weight": 11.0},
+      {"code": "KO", "name": "Coca-Cola Co", "weight": 9.5},
+      {"code": "PEP", "name": "PepsiCo Inc", "weight": 8.0},
+      {"code": "WMT", "name": "Walmart Inc", "weight": 5.5}
+    ],
+    "sectors": [
+      {"sector": "Household Products", "weight": 25.0},
+      {"sector": "Beverages", "weight": 20.0},
+      {"sector": "Food & Staples Retail", "weight": 18.0}
+    ]
+  },
+  {
+    "ticker": "XLY",
+    "name": "Consumer Discretionary Select Sector SPDR Fund",
+    "sector": "Consumer Discretionary",
+    "holdings": [
+      {"code": "AMZN", "name": "Amazon.com Inc", "weight": 22.0},
+      {"code": "TSLA", "name": "Tesla Inc", "weight": 12.0},
+      {"code": "HD", "name": "Home Depot", "weight": 8.5},
+      {"code": "MCD", "name": "McDonald's Corp", "weight": 4.0},
+      {"code": "NKE", "name": "Nike Inc", "weight": 3.0}
+    ],
+    "sectors": [
+      {"sector": "Internet & Direct Marketing", "weight": 30.0},
+      {"sector": "Automobiles", "weight": 15.0},
+      {"sector": "Home Improvement", "weight": 12.0}
+    ]
+  },
+  {
+    "ticker": "XLC",
+    "name": "Communication Services Select Sector SPDR Fund",
+    "sector": "Communication Services",
+    "holdings": [
+      {"code": "META", "name": "Meta Platforms Inc", "weight": 22.0},
+      {"code": "GOOGL", "name": "Alphabet Inc", "weight": 21.0},
+      {"code": "NFLX", "name": "Netflix Inc", "weight": 5.5},
+      {"code": "DIS", "name": "Walt Disney Co", "weight": 4.0},
+      {"code": "CMCSA", "name": "Comcast Corp", "weight": 3.5}
+    ],
+    "sectors": [
+      {"sector": "Interactive Media", "weight": 50.0},
+      {"sector": "Entertainment", "weight": 15.0},
+      {"sector": "Telecom", "weight": 12.0}
+    ]
+  },
+  {
+    "ticker": "XLRE",
+    "name": "Real Estate Select Sector SPDR Fund",
+    "sector": "Real Estate",
+    "holdings": [
+      {"code": "PLD", "name": "Prologis Inc", "weight": 11.0},
+      {"code": "AMT", "name": "American Tower", "weight": 8.5},
+      {"code": "EQIX", "name": "Equinix Inc", "weight": 7.5}
+    ],
+    "sectors": [
+      {"sector": "Specialized REITs", "weight": 35.0},
+      {"sector": "Industrial REITs", "weight": 15.0},
+      {"sector": "Residential REITs", "weight": 12.0}
+    ]
+  },
+  {
+    "ticker": "XLU",
+    "name": "Utilities Select Sector SPDR Fund",
+    "sector": "Utilities",
+    "holdings": [
+      {"code": "NEE", "name": "NextEra Energy", "weight": 14.0},
+      {"code": "SO", "name": "Southern Co", "weight": 7.5},
+      {"code": "DUK", "name": "Duke Energy", "weight": 7.0}
+    ],
+    "sectors": [
+      {"sector": "Electric Utilities", "weight": 60.0},
+      {"sector": "Multi-Utilities", "weight": 25.0}
+    ]
+  },
+  {
+    "ticker": "XLB",
+    "name": "Materials Select Sector SPDR Fund",
+    "sector": "Materials",
+    "holdings": [
+      {"code": "LIN", "name": "Linde PLC", "weight": 16.0},
+      {"code": "SHW", "name": "Sherwin-Williams", "weight": 7.0},
+      {"code": "APD", "name": "Air Products", "weight": 5.5}
+    ],
+    "sectors": [
+      {"sector": "Chemicals", "weight": 45.0},
+      {"sector": "Metals & Mining", "weight": 15.0}
+    ]
+  },
+  {
+    "ticker": "ARKK",
+    "name": "ARK Innovation ETF",
+    "sector": "Growth",
+    "holdings": [
+      {"code": "TSLA", "name": "Tesla Inc", "weight": 11.0},
+      {"code": "COIN", "name": "Coinbase Global", "weight": 7.5},
+      {"code": "ROKU", "name": "Roku Inc", "weight": 6.0},
+      {"code": "SQ", "name": "Block Inc", "weight": 5.5},
+      {"code": "PLTR", "name": "Palantir Tech", "weight": 5.0}
+    ],
+    "sectors": [
+      {"sector": "Technology", "weight": 40.0},
+      {"sector": "Healthcare", "weight": 25.0},
+      {"sector": "Fintech", "weight": 15.0}
+    ]
+  },
+  {
+    "ticker": "SOXX",
+    "name": "iShares Semiconductor ETF",
+    "sector": "Semiconductors",
+    "holdings": [
+      {"code": "NVDA", "name": "NVIDIA Corp", "weight": 10.0},
+      {"code": "AVGO", "name": "Broadcom Inc", "weight": 9.5},
+      {"code": "AMD", "name": "AMD Inc", "weight": 7.0},
+      {"code": "QCOM", "name": "Qualcomm Inc", "weight": 6.0},
+      {"code": "TXN", "name": "Texas Instruments", "weight": 5.5}
+    ],
+    "sectors": [
+      {"sector": "Semiconductors", "weight": 100.0}
+    ]
+  },
+  {
+    "ticker": "SMH",
+    "name": "VanEck Semiconductor ETF",
+    "sector": "Semiconductors",
+    "holdings": [
+      {"code": "NVDA", "name": "NVIDIA Corp", "weight": 20.0},
+      {"code": "TSM", "name": "Taiwan Semiconductor", "weight": 12.0},
+      {"code": "AVGO", "name": "Broadcom Inc", "weight": 8.5},
+      {"code": "AMD", "name": "AMD Inc", "weight": 5.5},
+      {"code": "ASML", "name": "ASML Holding", "weight": 5.0}
+    ],
+    "sectors": [
+      {"sector": "Semiconductors", "weight": 100.0}
+    ]
+  },
+  {
+    "ticker": "VGT",
+    "name": "Vanguard Information Technology ETF",
+    "sector": "Technology",
+    "holdings": [
+      {"code": "AAPL", "name": "Apple Inc", "weight": 16.5},
+      {"code": "MSFT", "name": "Microsoft Corp", "weight": 14.8},
+      {"code": "NVDA", "name": "NVIDIA Corp", "weight": 13.5}
+    ],
+    "sectors": [
+      {"sector": "Technology", "weight": 100.0}
+    ]
+  },
+  {
+    "ticker": "VUG",
+    "name": "Vanguard Growth ETF",
+    "sector": "Large Cap Growth",
+    "holdings": [
+      {"code": "AAPL", "name": "Apple Inc", "weight": 12.0},
+      {"code": "MSFT", "name": "Microsoft Corp", "weight": 11.0},
+      {"code": "NVDA", "name": "NVIDIA Corp", "weight": 10.5}
+    ],
+    "sectors": [
+      {"sector": "Technology", "weight": 55.0},
+      {"sector": "Consumer Discretionary", "weight": 15.0}
+    ]
+  },
+  {
+    "ticker": "VTV",
+    "name": "Vanguard Value ETF",
+    "sector": "Large Cap Value",
+    "holdings": [
+      {"code": "BRK.B", "name": "Berkshire Hathaway", "weight": 3.5},
+      {"code": "JPM", "name": "JPMorgan Chase", "weight": 3.0},
+      {"code": "UNH", "name": "UnitedHealth Group", "weight": 2.8}
+    ],
+    "sectors": [
+      {"sector": "Financials", "weight": 22.0},
+      {"sector": "Healthcare", "weight": 18.0},
+      {"sector": "Industrials", "weight": 14.0}
+    ]
+  },
+  {
+    "ticker": "EEM",
+    "name": "iShares MSCI Emerging Markets ETF",
+    "sector": "Emerging Markets",
+    "holdings": [
+      {"code": "TSM", "name": "Taiwan Semiconductor", "weight": 8.5},
+      {"code": "TCEHY", "name": "Tencent Holdings", "weight": 4.2},
+      {"code": "BABA", "name": "Alibaba Group", "weight": 2.8},
+      {"code": "005930.KS", "name": "Samsung Electronics", "weight": 3.5}
+    ],
+    "sectors": [
+      {"sector": "Technology", "weight": 25.0},
+      {"sector": "Financials", "weight": 20.0},
+      {"sector": "Consumer Discretionary", "weight": 12.0}
+    ]
+  },
+  {
+    "ticker": "EFA",
+    "name": "iShares MSCI EAFE ETF",
+    "sector": "International Developed",
+    "holdings": [
+      {"code": "NESN.SW", "name": "Nestle SA", "weight": 2.0},
+      {"code": "ASML", "name": "ASML Holding", "weight": 1.8},
+      {"code": "NOVO-B.CO", "name": "Novo Nordisk", "weight": 1.7}
+    ],
+    "sectors": [
+      {"sector": "Financials", "weight": 20.0},
+      {"sector": "Industrials", "weight": 15.0},
+      {"sector": "Healthcare", "weight": 14.0}
+    ]
+  },
+  {
+    "ticker": "GLD",
+    "name": "SPDR Gold Shares",
+    "sector": "Commodities",
+    "holdings": [],
+    "sectors": [{"sector": "Gold", "weight": 100.0}]
+  },
+  {
+    "ticker": "SLV",
+    "name": "iShares Silver Trust",
+    "sector": "Commodities",
+    "holdings": [],
+    "sectors": [{"sector": "Silver", "weight": 100.0}]
+  },
+  {
+    "ticker": "TLT",
+    "name": "iShares 20+ Year Treasury Bond ETF",
+    "sector": "Fixed Income",
+    "holdings": [],
+    "sectors": [{"sector": "US Treasury Bonds", "weight": 100.0}]
+  },
+  {
+    "ticker": "HYG",
+    "name": "iShares iBoxx High Yield Corporate Bond ETF",
+    "sector": "Fixed Income",
+    "holdings": [],
+    "sectors": [{"sector": "High Yield Bonds", "weight": 100.0}]
+  },
+  {
+    "ticker": "LQD",
+    "name": "iShares iBoxx Investment Grade Corporate Bond ETF",
+    "sector": "Fixed Income",
+    "holdings": [],
+    "sectors": [{"sector": "Investment Grade Bonds", "weight": 100.0}]
+  },
+  {
+    "ticker": "VNQ",
+    "name": "Vanguard Real Estate ETF",
+    "sector": "Real Estate",
+    "holdings": [
+      {"code": "PLD", "name": "Prologis Inc", "weight": 8.0},
+      {"code": "AMT", "name": "American Tower", "weight": 6.5},
+      {"code": "EQIX", "name": "Equinix Inc", "weight": 5.5}
+    ],
+    "sectors": [
+      {"sector": "Specialized REITs", "weight": 35.0},
+      {"sector": "Residential REITs", "weight": 15.0}
+    ]
+  },
+  {
+    "ticker": "DIA",
+    "name": "SPDR Dow Jones Industrial Average ETF",
+    "sector": "Large Cap Value",
+    "holdings": [
+      {"code": "UNH", "name": "UnitedHealth Group", "weight": 8.5},
+      {"code": "GS", "name": "Goldman Sachs", "weight": 7.5},
+      {"code": "MSFT", "name": "Microsoft Corp", "weight": 6.0},
+      {"code": "HD", "name": "Home Depot", "weight": 5.8}
+    ],
+    "sectors": [
+      {"sector": "Healthcare", "weight": 18.0},
+      {"sector": "Financials", "weight": 17.0},
+      {"sector": "Technology", "weight": 16.0}
+    ]
+  },
+  {
+    "ticker": "KWEB",
+    "name": "KraneShares CSI China Internet ETF",
+    "sector": "China Internet",
+    "holdings": [
+      {"code": "TCEHY", "name": "Tencent Holdings", "weight": 10.0},
+      {"code": "BABA", "name": "Alibaba Group", "weight": 9.5},
+      {"code": "PDD", "name": "PDD Holdings", "weight": 8.0},
+      {"code": "JD", "name": "JD.com Inc", "weight": 6.5},
+      {"code": "BIDU", "name": "Baidu Inc", "weight": 5.0}
+    ],
+    "sectors": [
+      {"sector": "Internet", "weight": 60.0},
+      {"sector": "E-Commerce", "weight": 25.0},
+      {"sector": "Cloud", "weight": 10.0}
+    ]
+  },
+  {
+    "ticker": "FXI",
+    "name": "iShares China Large-Cap ETF",
+    "sector": "China Large Cap",
+    "holdings": [
+      {"code": "TCEHY", "name": "Tencent Holdings", "weight": 9.0},
+      {"code": "BABA", "name": "Alibaba Group", "weight": 8.5},
+      {"code": "3690.HK", "name": "Meituan", "weight": 5.0},
+      {"code": "0939.HK", "name": "CCB", "weight": 4.5}
+    ],
+    "sectors": [
+      {"sector": "Consumer Discretionary", "weight": 30.0},
+      {"sector": "Financials", "weight": 25.0},
+      {"sector": "Communication", "weight": 18.0}
+    ]
+  },
+  {
+    "ticker": "MCHI",
+    "name": "iShares MSCI China ETF",
+    "sector": "China",
+    "holdings": [
+      {"code": "TCEHY", "name": "Tencent Holdings", "weight": 14.0},
+      {"code": "BABA", "name": "Alibaba Group", "weight": 9.0},
+      {"code": "PDD", "name": "PDD Holdings", "weight": 4.5}
+    ],
+    "sectors": [
+      {"sector": "Consumer Discretionary", "weight": 30.0},
+      {"sector": "Communication", "weight": 20.0},
+      {"sector": "Financials", "weight": 15.0}
+    ]
+  },
+  {
+    "ticker": "VWO",
+    "name": "Vanguard FTSE Emerging Markets ETF",
+    "sector": "Emerging Markets",
+    "holdings": [
+      {"code": "TSM", "name": "Taiwan Semiconductor", "weight": 7.0},
+      {"code": "TCEHY", "name": "Tencent Holdings", "weight": 4.0},
+      {"code": "BABA", "name": "Alibaba Group", "weight": 2.5}
+    ],
+    "sectors": [
+      {"sector": "Technology", "weight": 22.0},
+      {"sector": "Financials", "weight": 22.0}
+    ]
+  },
+  {
+    "ticker": "IEMG",
+    "name": "iShares Core MSCI Emerging Markets ETF",
+    "sector": "Emerging Markets",
+    "holdings": [
+      {"code": "TSM", "name": "Taiwan Semiconductor", "weight": 7.5},
+      {"code": "TCEHY", "name": "Tencent Holdings", "weight": 3.8}
+    ],
+    "sectors": [
+      {"sector": "Technology", "weight": 23.0},
+      {"sector": "Financials", "weight": 21.0}
+    ]
+  },
+  {"ticker": "IVV", "name": "iShares Core S&P 500 ETF", "sector": "Large Cap Blend", "holdings": [], "sectors": []},
+  {"ticker": "AGG", "name": "iShares Core US Aggregate Bond ETF", "sector": "Fixed Income", "holdings": [], "sectors": []},
+  {"ticker": "BND", "name": "Vanguard Total Bond Market ETF", "sector": "Fixed Income", "holdings": [], "sectors": []},
+  {"ticker": "SCHD", "name": "Schwab US Dividend Equity ETF", "sector": "Dividend", "holdings": [], "sectors": []},
+  {"ticker": "VIG", "name": "Vanguard Dividend Appreciation ETF", "sector": "Dividend", "holdings": [], "sectors": []},
+  {"ticker": "DVY", "name": "iShares Select Dividend ETF", "sector": "Dividend", "holdings": [], "sectors": []},
+  {"ticker": "JEPI", "name": "JPMorgan Equity Premium Income ETF", "sector": "Income", "holdings": [], "sectors": []},
+  {"ticker": "RSP", "name": "Invesco S&P 500 Equal Weight ETF", "sector": "Large Cap Blend", "holdings": [], "sectors": []},
+  {"ticker": "MDY", "name": "SPDR S&P MidCap 400 ETF", "sector": "Mid Cap Blend", "holdings": [], "sectors": []},
+  {"ticker": "IJR", "name": "iShares Core S&P Small-Cap ETF", "sector": "Small Cap Blend", "holdings": [], "sectors": []},
+  {"ticker": "MTUM", "name": "iShares MSCI USA Momentum Factor ETF", "sector": "Momentum", "holdings": [], "sectors": []},
+  {"ticker": "QUAL", "name": "iShares MSCI USA Quality Factor ETF", "sector": "Quality", "holdings": [], "sectors": []},
+  {"ticker": "USMV", "name": "iShares MSCI USA Min Vol Factor ETF", "sector": "Low Volatility", "holdings": [], "sectors": []},
+  {"ticker": "VEA", "name": "Vanguard FTSE Developed Markets ETF", "sector": "International Developed", "holdings": [], "sectors": []},
+  {"ticker": "VXUS", "name": "Vanguard Total International Stock ETF", "sector": "International", "holdings": [], "sectors": []},
+  {"ticker": "ACWI", "name": "iShares MSCI ACWI ETF", "sector": "Global", "holdings": [], "sectors": []},
+  {"ticker": "GDX", "name": "VanEck Gold Miners ETF", "sector": "Gold Mining", "holdings": [], "sectors": [{"sector": "Gold Mining", "weight": 100.0}]},
+  {"ticker": "GDXJ", "name": "VanEck Junior Gold Miners ETF", "sector": "Gold Mining", "holdings": [], "sectors": [{"sector": "Junior Gold Mining", "weight": 100.0}]},
+  {"ticker": "XBI", "name": "SPDR S&P Biotech ETF", "sector": "Biotech", "holdings": [], "sectors": [{"sector": "Biotech", "weight": 100.0}]},
+  {"ticker": "IBB", "name": "iShares Biotechnology ETF", "sector": "Biotech", "holdings": [], "sectors": [{"sector": "Biotech", "weight": 100.0}]},
+  {"ticker": "XHB", "name": "SPDR S&P Homebuilders ETF", "sector": "Homebuilders", "holdings": [], "sectors": []},
+  {"ticker": "ITB", "name": "iShares US Home Construction ETF", "sector": "Homebuilders", "holdings": [], "sectors": []},
+  {"ticker": "KRE", "name": "SPDR S&P Regional Banking ETF", "sector": "Regional Banks", "holdings": [], "sectors": []},
+  {"ticker": "XOP", "name": "SPDR S&P Oil & Gas Exploration ETF", "sector": "Oil & Gas", "holdings": [], "sectors": []},
+  {"ticker": "HACK", "name": "ETFMG Prime Cyber Security ETF", "sector": "Cybersecurity", "holdings": [], "sectors": [{"sector": "Cybersecurity", "weight": 100.0}]},
+  {"ticker": "BOTZ", "name": "Global X Robotics & AI ETF", "sector": "Robotics & AI", "holdings": [], "sectors": [{"sector": "Robotics & AI", "weight": 100.0}]},
+  {"ticker": "ARKG", "name": "ARK Genomic Revolution ETF", "sector": "Genomics", "holdings": [], "sectors": [{"sector": "Genomics", "weight": 100.0}]},
+  {"ticker": "ARKW", "name": "ARK Next Generation Internet ETF", "sector": "Internet", "holdings": [], "sectors": [{"sector": "Next Gen Internet", "weight": 100.0}]},
+  {"ticker": "ARKF", "name": "ARK Fintech Innovation ETF", "sector": "Fintech", "holdings": [], "sectors": [{"sector": "Fintech", "weight": 100.0}]},
+  {"ticker": "ARKQ", "name": "ARK Autonomous Tech & Robotics ETF", "sector": "Autonomous Tech", "holdings": [], "sectors": []},
+  {"ticker": "CQQQ", "name": "Invesco China Technology ETF", "sector": "China Tech", "holdings": [], "sectors": [{"sector": "China Technology", "weight": 100.0}]},
+  {"ticker": "ASHR", "name": "Xtrackers Harvest CSI 300 China A ETF", "sector": "China A-Shares", "holdings": [], "sectors": []},
+  {"ticker": "YINN", "name": "Direxion Daily FTSE China Bull 3X", "sector": "China Leveraged", "holdings": [], "sectors": []},
+  {"ticker": "TAN", "name": "Invesco Solar ETF", "sector": "Solar Energy", "holdings": [], "sectors": [{"sector": "Solar", "weight": 100.0}]},
+  {"ticker": "ICLN", "name": "iShares Global Clean Energy ETF", "sector": "Clean Energy", "holdings": [], "sectors": [{"sector": "Clean Energy", "weight": 100.0}]},
+  {"ticker": "LIT", "name": "Global X Lithium & Battery Tech ETF", "sector": "Lithium", "holdings": [], "sectors": [{"sector": "Lithium & Battery", "weight": 100.0}]},
+  {"ticker": "COPX", "name": "Global X Copper Miners ETF", "sector": "Copper Mining", "holdings": [], "sectors": [{"sector": "Copper Mining", "weight": 100.0}]},
+  {"ticker": "URA", "name": "Global X Uranium ETF", "sector": "Uranium", "holdings": [], "sectors": [{"sector": "Uranium", "weight": 100.0}]},
+  {"ticker": "JETS", "name": "US Global Jets ETF", "sector": "Airlines", "holdings": [], "sectors": [{"sector": "Airlines", "weight": 100.0}]},
+  {"ticker": "BITO", "name": "ProShares Bitcoin Strategy ETF", "sector": "Crypto", "holdings": [], "sectors": [{"sector": "Bitcoin Futures", "weight": 100.0}]},
+  {"ticker": "IBIT", "name": "iShares Bitcoin Trust ETF", "sector": "Crypto", "holdings": [], "sectors": [{"sector": "Bitcoin", "weight": 100.0}]},
+  {"ticker": "AMLP", "name": "Alerian MLP ETF", "sector": "MLP", "holdings": [], "sectors": [{"sector": "Energy MLP", "weight": 100.0}]},
+  {"ticker": "PFF", "name": "iShares Preferred & Income Securities ETF", "sector": "Preferred Stock", "holdings": [], "sectors": []},
+  {"ticker": "VYM", "name": "Vanguard High Dividend Yield ETF", "sector": "Dividend", "holdings": [], "sectors": []},
+  {"ticker": "SPYV", "name": "SPDR Portfolio S&P 500 Value ETF", "sector": "Large Cap Value", "holdings": [], "sectors": []},
+  {"ticker": "SPYG", "name": "SPDR Portfolio S&P 500 Growth ETF", "sector": "Large Cap Growth", "holdings": [], "sectors": []},
+  {"ticker": "SOXL", "name": "Direxion Daily Semiconductor Bull 3X", "sector": "Semiconductors Leveraged", "holdings": [], "sectors": []},
+  {"ticker": "TQQQ", "name": "ProShares UltraPro QQQ 3X", "sector": "Leveraged Nasdaq", "holdings": [], "sectors": []},
+  {"ticker": "UPRO", "name": "ProShares UltraPro S&P 500 3X", "sector": "Leveraged S&P 500", "holdings": [], "sectors": []}
+]
