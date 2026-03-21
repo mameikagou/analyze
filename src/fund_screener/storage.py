@@ -27,8 +27,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("fund_screener.storage")
 
-# 当前 schema 版本号，v2 新增 OLAP 量化分析字段和表
-_SCHEMA_VERSION = 2
+# 当前 schema 版本号，v3 新增申购限额字段
+_SCHEMA_VERSION = 3
 
 # ---------------------------------------------------------------------------
 # V1 建表 DDL（保留给测试构造 v1 DB 用）
@@ -125,7 +125,19 @@ CREATE INDEX IF NOT EXISTS idx_nav_adj ON nav_records(fund_id, date, adj_nav);
 """
 
 # ---------------------------------------------------------------------------
-# V2 全量建表 DDL — 全新 DB 直接用这个（包含所有 v2 新列和新表）
+# V2 → V3 迁移脚本
+#
+# 设计决策：screening_results 新增申购限额两列，用于存储标注信息。
+# 新列允许 NULL（旧记录无此数据，COALESCE 兜底）。
+# ---------------------------------------------------------------------------
+_MIGRATION_V2_TO_V3 = """
+-- screening_results 表：增加申购限额字段
+ALTER TABLE screening_results ADD COLUMN purchase_limit REAL;
+ALTER TABLE screening_results ADD COLUMN purchase_status TEXT;
+"""
+
+# ---------------------------------------------------------------------------
+# V3 全量建表 DDL — 全新 DB 直接用这个（包含所有 v3 新列和新表）
 # ---------------------------------------------------------------------------
 _CREATE_TABLES_SQL = """
 -- 基金维度表：一只基金一行，market+code 唯一
@@ -190,6 +202,8 @@ CREATE TABLE IF NOT EXISTS screening_results (
     ma_long         REAL    NOT NULL,
     ma_diff_pct     REAL    NOT NULL,
     daily_change_pct REAL,
+    purchase_limit  REAL,
+    purchase_status TEXT,
     created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
     UNIQUE(fund_id, screening_date)
 );
@@ -250,18 +264,26 @@ class DataStore:
         current_version = self._conn.execute("PRAGMA user_version").fetchone()[0]
 
         if current_version == 0:
-            # 全新数据库：直接用 V2 全量建表
+            # 全新数据库：直接用 V3 全量建表
             self._conn.executescript(_CREATE_TABLES_SQL)
             self._conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
             self._conn.commit()
             logger.debug("DataStore schema 全量初始化完成 (v%d)", _SCHEMA_VERSION)
         elif current_version == 1:
-            # 旧数据库：执行增量迁移
-            logger.info("DataStore: 检测到 v1 schema，开始迁移到 v2...")
+            # v1 → v2 → v3 链式迁移
+            logger.info("DataStore: 检测到 v1 schema，开始迁移到 v3...")
             self._conn.executescript(_MIGRATION_V1_TO_V2)
+            self._conn.executescript(_MIGRATION_V2_TO_V3)
             self._conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
             self._conn.commit()
-            logger.info("DataStore: v1 → v2 迁移完成")
+            logger.info("DataStore: v1 → v3 迁移完成")
+        elif current_version == 2:
+            # v2 → v3 增量迁移
+            logger.info("DataStore: 检测到 v2 schema，开始迁移到 v3...")
+            self._conn.executescript(_MIGRATION_V2_TO_V3)
+            self._conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
+            self._conn.commit()
+            logger.info("DataStore: v2 → v3 迁移完成")
 
     def close(self) -> None:
         """关闭数据库连接。"""
@@ -516,14 +538,17 @@ class DataStore:
             self._conn.execute(
                 """
                 INSERT INTO screening_results
-                    (fund_id, screening_date, nav, ma_short, ma_long, ma_diff_pct, daily_change_pct)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                    (fund_id, screening_date, nav, ma_short, ma_long, ma_diff_pct,
+                     daily_change_pct, purchase_limit, purchase_status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(fund_id, screening_date)
                 DO UPDATE SET nav = excluded.nav,
                               ma_short = excluded.ma_short,
                               ma_long = excluded.ma_long,
                               ma_diff_pct = excluded.ma_diff_pct,
-                              daily_change_pct = excluded.daily_change_pct
+                              daily_change_pct = excluded.daily_change_pct,
+                              purchase_limit = excluded.purchase_limit,
+                              purchase_status = excluded.purchase_status
                 """,
                 (
                     fund_id,
@@ -533,6 +558,8 @@ class DataStore:
                     fund.ma_long,
                     fund.ma_diff_pct,
                     fund.daily_change_pct,
+                    fund.purchase_limit,
+                    fund.purchase_status_text,
                 ),
             )
             self._conn.commit()

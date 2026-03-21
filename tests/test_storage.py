@@ -59,7 +59,7 @@ class TestInitCreatesTable:
     def test_schema_version_set(self, store: DataStore) -> None:
         assert store._conn is not None
         version = store._conn.execute("PRAGMA user_version").fetchone()[0]
-        assert version == 2
+        assert version == 3
 
 
 class TestPersistFundList:
@@ -231,7 +231,7 @@ class TestMigrationV1ToV2:
         store = DataStore(v1_db_path)
         assert store._conn is not None
         version = store._conn.execute("PRAGMA user_version").fetchone()[0]
-        assert version == 2
+        assert version == 3
         store.close()
 
     def test_migration_adds_new_columns(self, v1_db_path: str) -> None:

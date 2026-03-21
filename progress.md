@@ -145,11 +145,79 @@
 
 **测试状态**: 52/52 全部通过 (`uv run pytest -v`, 0.90s)
 
+### 申购限额标注 v0.3.0 (2026-03-21)
+
+> 核心理念：默认只标注不过滤，所有通过 MA 的基金都保留。报告按申购状态分组展示，用户可用 `--purchase-filter` 主动开启过滤。
+
+#### 数据模型 + 配置
+
+- [x] `models.py` — FundInfo 新增 2 个字段
+  - [x] `purchase_limit: float | None` — 日累计限定金额（元），None=未知
+  - [x] `purchase_status_text: str | None` — 申购状态原始文本
+- [x] `config.py` — CNFundConfig 新增 3 个配置项
+  - [x] `annotate_purchase: bool = True` — 是否标注（默认开启）
+  - [x] `filter_purchase: bool = False` — 是否过滤（默认关闭）
+  - [x] `purchase_min_limit: float = 1000` — 过滤阈值（元）
+- [x] `config.yaml` — 新增 3 行配置
+
+#### 数据获取层
+
+- [x] `fetchers/cn_fund.py` — 新增 `fetch_purchase_limit_map()` 方法
+  - [x] 调用 `ak.fund_purchase_em()` 获取全市场申购限额数据（~2.6 万条）
+  - [x] 返回 `{code: (daily_limit, status_text)}` 映射表
+  - [x] 走 FileCache 缓存（共享 TTL）
+  - [x] 列名动态识别（防 akshare 版本间变动）
+  - [x] NaN 值替换为 -1.0 标记为"未知"
+  - [x] 失败返回空 dict，不阻塞主流程
+
+#### Schema 迁移
+
+- [x] `storage.py` — Schema v2→v3 迁移
+  - [x] `_SCHEMA_VERSION` 从 2 升到 3
+  - [x] `_MIGRATION_V2_TO_V3` — screening_results 新增 purchase_limit + purchase_status 两列
+  - [x] `_CREATE_TABLES_SQL` V3 全量建表更新
+  - [x] `_init_db()` 新增 v2→v3 迁移路径 + v1→v3 链式迁移
+  - [x] `persist_screening_result()` — INSERT/UPSERT 新增 purchase_limit + purchase_status
+
+#### CLI 编排
+
+- [x] `cli.py` — 核心编排逻辑
+  - [x] `_process_market()` 新增 `filter_purchase` / `purchase_min_limit` 参数
+  - [x] Step 0.5: A 股市场循环外预加载申购限额映射表
+  - [x] MA 通过后：O(1) 查映射表标注限额信息
+  - [x] 可选过滤：仅当 `--purchase-filter` 开启时剔除限额不足的基金
+  - [x] FundInfo 构建时传入 purchase_limit + purchase_status_text
+  - [x] `--purchase-filter` CLI flag（默认不过滤）
+  - [x] `--purchase-min-limit N` CLI flag（过滤阈值，默认 1000）
+  - [x] CLI flag 优先级覆盖 config.yaml 配置
+
+#### 报告展示
+
+- [x] `reporter.py` — 报告按申购状态分组展示（最大改动）
+  - [x] `_classify_by_purchase()` — 四组分类（正常/限额/暂停/未知）
+  - [x] `_format_purchase_limit()` — 金额格式化（无限制/X亿/X万/X元/暂停/未知）
+  - [x] `_render_fund_detail()` — 抽取单基金渲染为独立函数（消除重复代码）
+  - [x] CN 市场报告三（四）组展示：可正常申购 → 限额申购 → 暂停申购 → 状态未知
+  - [x] 筛选概览新增 A 股申购状态分布统计
+  - [x] 每只基金新增"申购状态 + 日限额"标注行
+  - [x] US/HK 市场保持原有 MA 差值降序排列
+
+#### 测试
+
+- [x] `tests/test_purchase_filter.py` — 24 个新测试
+  - [x] TestFetchPurchaseLimitMap: 正常解析、NaN 处理、API 失败兜底、缓存命中、列名缺失
+  - [x] TestClassifyByPurchase: 正常/限额/暂停/未知/NaN/边界 1e8/混合
+  - [x] TestFormatPurchaseLimit: 无限制/亿/万/元/暂停/未知
+  - [x] TestMigrationV2ToV3: 版本升级、新列存在、旧数据保留、含申购字段写入
+- [x] `tests/test_storage.py` — schema 版本号从 2 更新到 3
+
+**测试状态**: 76/76 全部通过 (`uv run pytest -v`, 1.08s)
+
 ---
 
 ## 端到端验证 (2026-03-21)
 
-- [x] `sqlite3 data/fund_data.db "PRAGMA user_version;"` — 返回 2 ✅
+- [x] `sqlite3 data/fund_data.db "PRAGMA user_version;"` — 返回 2 ✅ (v0.2.0)
 - [x] `uv run fund-screener --db-stats` — V1→V2 自动迁移 + 6 张表统计正常 ✅
 - [x] Schema 验证: funds 新增 establish_date/manager_name/fund_scale/track_benchmark ✅
 - [x] Schema 验证: nav_records 新增 unit_nav/cumulative_nav/adj_nav ✅
@@ -163,6 +231,14 @@
 - [x] `uv run pytest -v` — 52/52 全部通过 (0.88s) ✅
 - [ ] `uv run fund-screener --update-sectors` — 待验证（需跑全量申万数据，耗时较长）
 - [ ] `uv run fund-screener bulk-fetch --market cn --concurrency 5` — 待验证（需跑全量数据）
+
+### v0.3.0 端到端验证（待执行）
+
+- [ ] `sqlite3 data/fund_data.db "PRAGMA user_version;"` — 应返回 3（v2→v3 自动迁移）
+- [ ] `uv run fund-screener --market cn -v` — 确认日志显示"基金申购限额数据加载完成"
+- [ ] 检查 `output/fund_report.md` — 确认 CN 市场按三组分组展示（正常/限额/暂停）
+- [ ] `uv run fund-screener --market cn --purchase-filter --purchase-min-limit 1000` — 验证过滤生效
+- [ ] `uv run pytest -v` — 76/76 全部通过 ✅
 
 ---
 

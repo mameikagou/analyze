@@ -16,6 +16,7 @@ A股公募基金数据获取器。
 from __future__ import annotations
 
 import logging
+import math
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -352,6 +353,98 @@ class CNFundFetcher(BaseFetcher):
             self.cache.set(cache_key, detail)
 
         return detail
+
+    def fetch_purchase_limit_map(self) -> dict[str, tuple[float, str]]:
+        """
+        获取全市场基金申购限额映射表。
+
+        调用 ak.fund_purchase_em() 获取全市场基金申购信息，
+        返回 {基金代码: (日累计限定金额, 申购状态文本)} 映射。
+
+        设计决策：
+        - 走 FileCache 缓存（与其他 API 共享 TTL），避免重复调用
+        - 列名用 in 模糊匹配，防止 akshare 版本间列名变动
+        - 失败返回空 dict，不阻塞主流程（标注是锦上添花，不是核心链路）
+        - NaN 值会被替换为 -1.0 并标记为"未知"
+
+        Returns:
+            {code: (daily_limit, status_text)}，空 dict 表示获取失败
+        """
+        import akshare as ak
+
+        cache_key = self._cache_key("all", "purchase_limit_map")
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            # 缓存存的是 list[dict]，还原为 dict[str, tuple]
+            return {
+                item["code"]: (item["limit"], item["status"])
+                for item in cached
+            }
+
+        self._rate_limit()
+
+        try:
+            df = ak.fund_purchase_em()
+        except Exception as e:
+            logger.warning("获取基金申购限额数据失败（不影响主流程）: %s", e)
+            return {}
+
+        if df is None or df.empty:
+            logger.warning("基金申购限额数据为空")
+            return {}
+
+        # 动态识别列名（akshare 版本间列名可能变）
+        code_col: str | None = None
+        limit_col: str | None = None
+        status_col: str | None = None
+
+        for col in df.columns:
+            col_str = str(col)
+            if "代码" in col_str:
+                code_col = col
+            elif "日累计限定金额" in col_str or "限定金额" in col_str:
+                limit_col = col
+            elif "申购状态" in col_str:
+                status_col = col
+
+        if code_col is None:
+            logger.warning("申购限额数据列名不匹配（缺少代码列），实际列: %s", list(df.columns))
+            return {}
+
+        result: dict[str, tuple[float, str]] = {}
+        for _, row in df.iterrows():
+            code = str(row[code_col]).strip()
+            if not code:
+                continue
+
+            # 解析限额金额：NaN / None → -1.0（标记为未知）
+            daily_limit = -1.0
+            if limit_col is not None:
+                try:
+                    raw_limit = float(row[limit_col])
+                    if not math.isnan(raw_limit):
+                        daily_limit = raw_limit
+                except (ValueError, TypeError):
+                    pass
+
+            # 解析状态文本
+            status_text = "未知"
+            if status_col is not None:
+                raw_status = str(row[status_col]).strip()
+                if raw_status and raw_status not in ("nan", "None", "<NA>"):
+                    status_text = raw_status
+
+            result[code] = (daily_limit, status_text)
+
+        # 缓存为 list[dict] 格式（JSON 序列化友好）
+        cache_data = [
+            {"code": k, "limit": v[0], "status": v[1]}
+            for k, v in result.items()
+        ]
+        self.cache.set(cache_key, cache_data)
+
+        logger.info("基金申购限额数据加载完成: %d 只基金", len(result))
+        return result
 
     def fetch_sector_exposure(self, code: str) -> list[SectorWeight]:
         """

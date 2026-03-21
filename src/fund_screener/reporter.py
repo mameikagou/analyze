@@ -5,17 +5,29 @@ Markdown 报告生成器。
 同时附带 LLM 分析提示词，方便用户直接拖进 AI Studio / Claude 进行深度分析。
 
 输出结构：
-1. 筛选概览（各市场通过率）
-2. 按市场分组的基金明细（按 MA 差值降序排列 — 趋势最强的排最前）
+1. 筛选概览（各市场通过率 + CN 市场申购状态统计）
+2. 按市场分组的基金明细
+   - CN 市场：按申购状态分三组（可正常申购 → 限额申购 → 暂停申购）
+   - US/HK 市场：按 MA 差值降序
 3. LLM 分析提示词模板
+
+V3 改动（申购限额标注）：
+- CN 市场报告按申购状态分组展示，优质限购基金也能被发现
+- 分组阈值：>= 1e8（1 亿）视为无限制，> 0 且 < 1e8 为限额，= 0 为暂停
+- US/HK 市场不涉及申购限额，保持原有排序
 """
 
 from __future__ import annotations
 
+import math
 from datetime import datetime
 from pathlib import Path
 
 from fund_screener.models import FundInfo, Market, ScreeningSummary
+
+# 申购状态分组阈值（元）
+# >= 1e8（1 亿）视为"无限制"（东方财富用 1e11 表示无限制，1e8 是保守分界线）
+_PURCHASE_LIMIT_NORMAL_THRESHOLD = 1e8
 
 
 def generate_report(
@@ -68,6 +80,18 @@ def generate_report(
     total_scanned = sum(s.total_scanned for s in summaries)
     lines.append(f"**全市场合计**: {total_passed}/{total_scanned} 只基金处于上涨趋势")
     lines.append("")
+
+    # CN 市场申购状态统计（如果有标注数据）
+    cn_funds = [f for f in funds if f.market == Market.CN]
+    if cn_funds:
+        normal, limited, suspended, unknown = _classify_by_purchase(cn_funds)
+        lines.append("**A股申购状态分布**:")
+        lines.append(f"- 可正常申购: {len(normal)} 只")
+        lines.append(f"- 限额申购: {len(limited)} 只")
+        lines.append(f"- 暂停申购: {len(suspended)} 只")
+        lines.append(f"- 状态未知: {len(unknown)} 只")
+        lines.append("")
+
     lines.append("---")
     lines.append("")
 
@@ -80,74 +104,57 @@ def generate_report(
         if not market_funds:
             continue
 
-        # 按 MA 差值降序（趋势最强的排最前）
-        market_funds.sort(key=lambda f: f.ma_diff_pct, reverse=True)
-
         label = market_labels.get(market, market.value)
         emoji = market_emojis.get(market, "")
-        lines.append(f"## [{emoji}] {label} (共 {len(market_funds)} 只)")
-        lines.append("")
 
-        for i, fund in enumerate(market_funds, 1):
-            lines.append(f"### {i}. {fund.name} ({fund.code})")
-            lines.append("")
-            lines.append(
-                f"- **最新净值/价格**: {fund.nav:.4f} | "
-                f"**MA{ma_short_period}**: {fund.ma_short:.4f} | "
-                f"**MA{ma_long_period}**: {fund.ma_long:.4f} | "
-                f"**差值**: {fund.ma_diff_pct:+.2f}%"
-            )
-
-            # 当日涨跌幅
-            if fund.daily_change_pct is not None:
-                lines.append(f"- **当日涨跌**: {fund.daily_change_pct:+.2f}%")
-
-            # 多周期走势
-            if fund.trend_stats is not None:
-                parts: list[str] = []
-                labels = [
-                    ("1周", fund.trend_stats.change_1w),
-                    ("1月", fund.trend_stats.change_1m),
-                    ("3月", fund.trend_stats.change_3m),
-                    ("6月", fund.trend_stats.change_6m),
-                    ("1年", fund.trend_stats.change_1y),
-                ]
-                for period_label, val in labels:
-                    if val is not None:
-                        parts.append(f"{period_label} {val:+.2f}%")
-                    else:
-                        parts.append(f"{period_label} N/A")
-                lines.append(f"- **走势**: {' | '.join(parts)}")
-
-            if fund.holdings_date:
-                lines.append(f"- **持仓报告期**: {fund.holdings_date}")
-
-            lines.append(f"- **数据日期**: {fund.data_date}")
+        # CN 市场：按申购状态分组展示
+        if market == Market.CN:
+            normal, limited, suspended, unknown = _classify_by_purchase(market_funds)
+            lines.append(f"## [{emoji}] {label} (共 {len(market_funds)} 只)")
             lines.append("")
 
-            # Top Holdings 表格
-            if fund.top_holdings:
-                lines.append("#### Top 持仓")
-                lines.append("| 排名 | 股票代码 | 股票名称 | 持仓占比 |")
-                lines.append("|------|----------|----------|----------|")
-                for j, h in enumerate(fund.top_holdings[:10], 1):
-                    weight_str = f"{h.weight_pct:.2f}%" if h.weight_pct is not None else "N/A"
-                    lines.append(
-                        f"| {j} | {h.stock_code} | {h.stock_name} | {weight_str} |"
-                    )
+            # 全局序号计数器（跨分组连续编号）
+            counter = 0
+
+            if normal:
+                lines.append(f"### 一、可正常申购 (日限额 >= 1 亿，共 {len(normal)} 只)")
                 lines.append("")
+                normal.sort(key=lambda f: f.ma_diff_pct, reverse=True)
+                for fund in normal:
+                    counter += 1
+                    _render_fund_detail(lines, fund, counter, ma_short_period, ma_long_period)
 
-            # 行业分布表格
-            if fund.sector_exposure:
-                lines.append("#### 行业分布")
-                lines.append("| 行业 | 占比 |")
-                lines.append("|------|------|")
-                for s in fund.sector_exposure[:10]:
-                    lines.append(f"| {s.sector} | {s.weight_pct:.2f}% |")
+            if limited:
+                lines.append(f"### 二、限额申购 (0 < 日限额 < 1 亿，共 {len(limited)} 只)")
                 lines.append("")
+                limited.sort(key=lambda f: f.ma_diff_pct, reverse=True)
+                for fund in limited:
+                    counter += 1
+                    _render_fund_detail(lines, fund, counter, ma_short_period, ma_long_period)
 
-            lines.append("---")
+            if suspended:
+                lines.append(f"### 三、暂停申购 (日限额 = 0，共 {len(suspended)} 只)")
+                lines.append("")
+                suspended.sort(key=lambda f: f.ma_diff_pct, reverse=True)
+                for fund in suspended:
+                    counter += 1
+                    _render_fund_detail(lines, fund, counter, ma_short_period, ma_long_period)
+
+            if unknown:
+                lines.append(f"### 四、申购状态未知 (共 {len(unknown)} 只)")
+                lines.append("")
+                unknown.sort(key=lambda f: f.ma_diff_pct, reverse=True)
+                for fund in unknown:
+                    counter += 1
+                    _render_fund_detail(lines, fund, counter, ma_short_period, ma_long_period)
+        else:
+            # US/HK 市场：按 MA 差值降序（无申购限额概念）
+            market_funds.sort(key=lambda f: f.ma_diff_pct, reverse=True)
+            lines.append(f"## [{emoji}] {label} (共 {len(market_funds)} 只)")
             lines.append("")
+
+            for i, fund in enumerate(market_funds, 1):
+                _render_fund_detail(lines, fund, i, ma_short_period, ma_long_period)
 
     # ---- LLM 分析提示词 ----
     lines.append("## LLM 深度分析提示词")
@@ -164,6 +171,145 @@ def generate_report(
     output_path.write_text(content, encoding="utf-8")
 
     return output_path.resolve()
+
+
+def _classify_by_purchase(
+    funds: list[FundInfo],
+) -> tuple[list[FundInfo], list[FundInfo], list[FundInfo], list[FundInfo]]:
+    """
+    按申购状态将基金分为四组。
+
+    分组逻辑：
+    - 正常：purchase_limit >= 1e8（1 亿）或 purchase_limit 非常大（东财用 1e11 表示无限制）
+    - 限额：0 < purchase_limit < 1e8
+    - 暂停：purchase_limit == 0
+    - 未知：purchase_limit is None 或 < 0（获取失败）或 NaN
+
+    Returns:
+        (正常申购, 限额申购, 暂停申购, 状态未知) 四个列表
+    """
+    normal: list[FundInfo] = []
+    limited: list[FundInfo] = []
+    suspended: list[FundInfo] = []
+    unknown: list[FundInfo] = []
+
+    for fund in funds:
+        limit = fund.purchase_limit
+        if limit is None or limit < 0 or (isinstance(limit, float) and math.isnan(limit)):
+            unknown.append(fund)
+        elif limit == 0:
+            suspended.append(fund)
+        elif limit >= _PURCHASE_LIMIT_NORMAL_THRESHOLD:
+            normal.append(fund)
+        else:
+            limited.append(fund)
+
+    return normal, limited, suspended, unknown
+
+
+def _format_purchase_limit(limit: float | None) -> str:
+    """
+    将日累计限定金额格式化为人类可读字符串。
+
+    Examples:
+        1e11 → "无限制"
+        1e4  → "1.00 万"
+        1e8  → "1.00 亿"
+        0    → "暂停"
+        None → "未知"
+    """
+    if limit is None or limit < 0 or (isinstance(limit, float) and math.isnan(limit)):
+        return "未知"
+    if limit == 0:
+        return "暂停"
+    if limit >= _PURCHASE_LIMIT_NORMAL_THRESHOLD:
+        if limit >= 1e10:
+            return "无限制"
+        return f"{limit / 1e8:.2f} 亿"
+    if limit >= 1e4:
+        return f"{limit / 1e4:.2f} 万"
+    return f"{limit:.0f} 元"
+
+
+def _render_fund_detail(
+    lines: list[str],
+    fund: FundInfo,
+    index: int,
+    ma_short_period: int,
+    ma_long_period: int,
+) -> None:
+    """
+    渲染单只基金的详细信息到 lines 列表中。
+
+    抽取为独立函数避免 CN/US/HK 三个分支重复代码。
+    """
+    lines.append(f"#### {index}. {fund.name} ({fund.code})")
+    lines.append("")
+
+    ma_line = (
+        f"- **最新净值/价格**: {fund.nav:.4f} | "
+        f"**MA{ma_short_period}**: {fund.ma_short:.4f} | "
+        f"**MA{ma_long_period}**: {fund.ma_long:.4f} | "
+        f"**差值**: {fund.ma_diff_pct:+.2f}%"
+    )
+    lines.append(ma_line)
+
+    # 申购限额标注（仅 CN 市场有此数据）
+    if fund.purchase_limit is not None or fund.purchase_status_text is not None:
+        limit_str = _format_purchase_limit(fund.purchase_limit)
+        status_str = fund.purchase_status_text or "未知"
+        lines.append(f"- **申购状态**: {status_str} | **日限额**: {limit_str}")
+
+    # 当日涨跌幅
+    if fund.daily_change_pct is not None:
+        lines.append(f"- **当日涨跌**: {fund.daily_change_pct:+.2f}%")
+
+    # 多周期走势
+    if fund.trend_stats is not None:
+        parts: list[str] = []
+        period_labels = [
+            ("1周", fund.trend_stats.change_1w),
+            ("1月", fund.trend_stats.change_1m),
+            ("3月", fund.trend_stats.change_3m),
+            ("6月", fund.trend_stats.change_6m),
+            ("1年", fund.trend_stats.change_1y),
+        ]
+        for period_label, val in period_labels:
+            if val is not None:
+                parts.append(f"{period_label} {val:+.2f}%")
+            else:
+                parts.append(f"{period_label} N/A")
+        lines.append(f"- **走势**: {' | '.join(parts)}")
+
+    if fund.holdings_date:
+        lines.append(f"- **持仓报告期**: {fund.holdings_date}")
+
+    lines.append(f"- **数据日期**: {fund.data_date}")
+    lines.append("")
+
+    # Top Holdings 表格
+    if fund.top_holdings:
+        lines.append("##### Top 持仓")
+        lines.append("| 排名 | 股票代码 | 股票名称 | 持仓占比 |")
+        lines.append("|------|----------|----------|----------|")
+        for j, h in enumerate(fund.top_holdings[:10], 1):
+            weight_str = f"{h.weight_pct:.2f}%" if h.weight_pct is not None else "N/A"
+            lines.append(
+                f"| {j} | {h.stock_code} | {h.stock_name} | {weight_str} |"
+            )
+        lines.append("")
+
+    # 行业分布表格
+    if fund.sector_exposure:
+        lines.append("##### 行业分布")
+        lines.append("| 行业 | 占比 |")
+        lines.append("|------|------|")
+        for s in fund.sector_exposure[:10]:
+            lines.append(f"| {s.sector} | {s.weight_pct:.2f}% |")
+        lines.append("")
+
+    lines.append("---")
+    lines.append("")
 
 
 def _get_llm_prompt(ma_short: int, ma_long: int) -> str:

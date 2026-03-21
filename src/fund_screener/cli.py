@@ -95,6 +95,9 @@ def _process_market(
     fetcher: BaseFetcher,
     config: AppConfig,
     store: DataStore | None = None,
+    *,
+    filter_purchase: bool = False,
+    purchase_min_limit: float = 1000.0,
 ) -> tuple[list[FundInfo], ScreeningSummary]:
     """
     处理单个市场的完整流程：获取列表 → 筛选 → 获取持仓。
@@ -140,6 +143,21 @@ def _process_market(
                     logger.warning("A 股当日涨跌幅数据列名不匹配: %s", list(daily_df.columns))
         except Exception as e:
             logger.warning("获取 A 股当日涨跌幅数据失败（不影响主流程）: %s", e)
+
+    # Step 0.5: A 股市场预加载申购限额映射表（只要 annotate_purchase=true 就加载）
+    # 为什么在循环外加载？fund_purchase_em() 返回 2.6 万条数据，5-10 秒，
+    # 只调一次然后用 dict O(1) 查询，比每只基金单独查快 400 倍。
+    purchase_limit_map: dict[str, tuple[float, str]] = {}
+    if market == Market.CN and config.cn_fund.annotate_purchase:
+        try:
+            from fund_screener.fetchers.cn_fund import CNFundFetcher
+            if isinstance(fetcher, CNFundFetcher):
+                logger.info("正在加载基金申购限额数据...")
+                purchase_limit_map = fetcher.fetch_purchase_limit_map()
+        except Exception as e:
+            logger.warning("加载申购限额数据失败（不影响主流程）: %s", e)
+
+    purchase_filtered_count = 0
 
     # Step 1: 获取基金列表
     fund_list = fetcher.fetch_fund_list()
@@ -188,8 +206,27 @@ def _process_market(
             if result is None or not result.passed:
                 continue
 
-            # 通过筛选！获取持仓和行业分布
+            # 通过筛选！标注申购限额信息（始终执行）
             logger.debug("通过: %s (%s), MA差值: %+.2f%%", name, code, result.ma_diff_pct)
+
+            # 申购限额标注 — 从预加载的映射表 O(1) 查询
+            purchase_limit: float | None = None
+            purchase_status_text: str | None = None
+
+            if purchase_limit_map:
+                limit_info = purchase_limit_map.get(code)
+                if limit_info is not None:
+                    purchase_limit, purchase_status_text = limit_info
+
+                # 仅当用户主动开启 --purchase-filter 时才剔除
+                # 默认行为：只标注，不过滤，所有通过 MA 的基金都保留
+                if filter_purchase and purchase_limit is not None and purchase_limit >= 0 and purchase_limit < purchase_min_limit:
+                    purchase_filtered_count += 1
+                    logger.debug(
+                        "申购过滤: %s (%s) 日限额 %.0f < 阈值 %.0f，跳过",
+                        name, code, purchase_limit, purchase_min_limit,
+                    )
+                    continue
 
             holdings = fetcher.fetch_holdings(code)
             sectors = fetcher.fetch_sector_exposure(code)
@@ -235,6 +272,8 @@ def _process_market(
                 sector_exposure=sectors,
                 daily_change_pct=daily_change,
                 trend_stats=trend_stats,
+                purchase_limit=purchase_limit,
+                purchase_status_text=purchase_status_text,
                 data_date=latest_date,
             )
             # 注入点 4: 持久化筛选结果
@@ -260,6 +299,11 @@ def _process_market(
         "%s 筛选完成: %d/%d 只通过 (%.1f%%)",
         label, len(passed_funds), total_scanned, pass_rate,
     )
+    if purchase_filtered_count > 0:
+        logger.info(
+            "%s 申购过滤: %d 只因限额不足被剔除",
+            label, purchase_filtered_count,
+        )
 
     return passed_funds, summary
 
@@ -365,6 +409,14 @@ def _print_db_stats(config: AppConfig) -> None:
 @click.option("--no-store", is_flag=True, help="禁用 SQLite 数据湖持久化")
 @click.option("--db-stats", is_flag=True, help="查看数据湖统计信息（不执行筛选）")
 @click.option("--update-sectors", is_flag=True, help="更新申万行业映射表")
+@click.option(
+    "--purchase-filter", is_flag=True, default=False,
+    help="开启申购限额过滤（默认只标注不过滤）",
+)
+@click.option(
+    "--purchase-min-limit", type=float, default=None,
+    help="申购过滤阈值（元），仅 --purchase-filter 开启时生效，默认 1000",
+)
 @click.option("--verbose", "-v", is_flag=True, help="输出详细日志")
 @click.pass_context
 def main(
@@ -376,6 +428,8 @@ def main(
     no_store: bool,
     db_stats: bool,
     update_sectors: bool,
+    purchase_filter: bool,
+    purchase_min_limit: float | None,
     verbose: bool,
 ) -> None:
     """
@@ -451,8 +505,20 @@ def main(
     all_funds: list[FundInfo] = []
     all_summaries: list[ScreeningSummary] = []
 
+    # 确定申购过滤参数：CLI flag 覆盖 config.yaml 配置
+    effective_filter_purchase = purchase_filter or config.cn_fund.filter_purchase
+    effective_min_limit = (
+        purchase_min_limit
+        if purchase_min_limit is not None
+        else config.cn_fund.purchase_min_limit
+    )
+
     for _mkt, fetcher in fetchers.items():
-        funds, summary = _process_market(fetcher, config, store=store)
+        funds, summary = _process_market(
+            fetcher, config, store=store,
+            filter_purchase=effective_filter_purchase,
+            purchase_min_limit=effective_min_limit,
+        )
         all_funds.extend(funds)
         all_summaries.append(summary)
 

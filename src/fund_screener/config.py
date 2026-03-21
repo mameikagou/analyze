@@ -21,6 +21,18 @@ class CNFundConfig(BaseModel):
     enabled: bool = True
     fund_types: list[str] = Field(default_factory=lambda: ["股票型", "混合型", "指数型"])
     max_funds: int = 500
+    annotate_purchase: bool = Field(
+        default=True,
+        description="是否标注申购限额信息（默认开启，仅标注不过滤）",
+    )
+    filter_purchase: bool = Field(
+        default=False,
+        description="是否过滤限额不足的基金（默认关闭，需配合 --purchase-filter 使用）",
+    )
+    purchase_min_limit: float = Field(
+        default=1000.0,
+        description="申购过滤阈值（元），仅 filter_purchase=true 时生效",
+    )
 
 
 class USETFConfig(BaseModel):

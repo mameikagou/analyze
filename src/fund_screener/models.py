@@ -103,6 +103,14 @@ class FundInfo(BaseModel):
         default=None,
         description="多周期涨跌幅统计（1周/1月/3月/6月/1年）",
     )
+    purchase_limit: float | None = Field(
+        default=None,
+        description="日累计限定金额（元），None=未知，0=暂停申购，1e11=无限制",
+    )
+    purchase_status_text: str | None = Field(
+        default=None,
+        description="申购状态原始文本（如 '开放申购'、'暂停申购'、'暂停大额申购'）",
+    )
     data_date: date = Field(description="数据日期")
     holdings_date: str | None = Field(
         default=None,

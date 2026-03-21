@@ -64,6 +64,8 @@ uv run fund-screener [OPTIONS]
 | `--no-cache` | flag | - | 忽略缓存，强制重新拉取 API 数据 |
 | `--no-store` | flag | - | 本次运行不写入 SQLite 数据湖 |
 | `--db-stats` | flag | - | 查看数据湖统计信息（不执行筛选） |
+| `--purchase-filter` | flag | - | 开启申购限额过滤（默认只标注不过滤，仅 CN 市场） |
+| `--purchase-min-limit` | 数字 | `1000` | 申购过滤阈值（元），仅 `--purchase-filter` 开启时生效 |
 | `--verbose / -v` | flag | - | 输出 DEBUG 级别详细日志 |
 
 ### 使用示例
@@ -103,6 +105,17 @@ uv run fund-screener --market us --output ./my_report.md
 
 # 详细日志（调试用）
 uv run fund-screener --market us -v
+
+# --- 申购限额（仅 A 股） ---
+
+# 默认行为：所有通过 MA 的基金都保留，报告按申购状态分组展示
+uv run fund-screener --market cn
+
+# 主动过滤：剔除日限额 < 1000 元的基金
+uv run fund-screener --market cn --purchase-filter --purchase-min-limit 1000
+
+# 过滤暂停申购 + 限额过低的基金（阈值 5 万）
+uv run fund-screener --market cn --purchase-filter --purchase-min-limit 50000
 
 # --- 组合使用 ---
 
@@ -178,6 +191,9 @@ cn_fund:
     - "混合型"
     - "指数型"
   max_funds: 500          # 最多处理数量（设 0 不限制）
+  annotate_purchase: true       # 标注申购限额信息（默认开启，零成本）
+  filter_purchase: false        # 过滤限额不足的基金（默认关闭，CLI --purchase-filter 开启）
+  purchase_min_limit: 1000      # 过滤阈值（元），仅 filter_purchase=true 时生效
 
 # ---- 美股 ETF ----
 us_etf:
@@ -227,14 +243,15 @@ rate_limit:
 | 写入失败 | 不影响主流程 | 不影响主流程 |
 | 关闭方式 | `--no-cache` | `--no-store` |
 
-### 数据库结构（5 张表）
+### 数据库结构（6 张表）
 
 ```
 funds                  基金维度表        UNIQUE(market, code)
 nav_records            净值时序数据      UNIQUE(fund_id, date)
 holdings               持仓快照          UNIQUE(fund_id, stock_code, snapshot_date)
 sector_exposure        行业分布快照      UNIQUE(fund_id, sector, snapshot_date)
-screening_results      筛选结果快照      UNIQUE(fund_id, screening_date)
+screening_results      筛选结果快照      UNIQUE(fund_id, screening_date)  含申购限额字段
+stock_sector_mapping   申万行业映射      UNIQUE(stock_code)
 ```
 
 ### 直接查询数据库
@@ -278,6 +295,32 @@ ORDER BY f.code, n.date;
 .output stdout
 ```
 
+### A 股申购限额标注
+
+A 股市场的报告会自动按申购状态分组展示：
+
+```markdown
+## 筛选概览
+- MA 筛选通过: 400 只
+- 可正常申购: 250 只
+- 限额申购: 80 只
+- 暂停申购: 60 只
+- 状态未知: 10 只
+
+### 一、可正常申购（日限额 >= 1 亿）
+| 基金代码 | 基金名称 | MA差值 | 日限额 | 申购状态 | ...
+
+### 二、限额申购（0 < 日限额 < 1 亿）
+| 基金代码 | 基金名称 | MA差值 | 日限额 | 申购状态 | ...
+
+### 三、暂停申购（日限额 = 0）
+| 基金代码 | 基金名称 | MA差值 | 日限额 | 申购状态 | ...
+```
+
+**设计决策**: 默认只标注不过滤。所有通过 MA 的基金都保留在报告中，用户一眼就能看清哪些能买、哪些限购、哪些暂停。优质限购基金（如顶流明星基金限额 1 万）也不会被漏掉。
+
+如需主动过滤，使用 `--purchase-filter --purchase-min-limit N` 开启。
+
 ### 可视化工具推荐
 
 - **[DB Browser for SQLite](https://sqlitebrowser.org/)** — 免费 GUI，直接打开 `data/fund_data.db` 浏览表、画图表
@@ -314,6 +357,10 @@ analyze/
     test_screener.py           # 筛选逻辑测试
     test_reporter.py           # 报告生成测试
     test_storage.py            # 数据湖测试
+    test_purchase_filter.py    # 申购限额标注 + 过滤测试
+    test_analytics.py          # OLAP 分析函数测试
+    test_error_queue.py        # 错误队列测试
+    test_async_fetcher.py      # 异步批量抓取测试
 ```
 
 ---
@@ -346,16 +393,20 @@ CLI 启动
   |
   v
 按市场遍历:
+  |-- [CN] 预加载申购限额映射表 (fetch_purchase_limit_map)
+  |-- [CN] 预加载当日涨跌幅映射表
   |-- 获取基金列表 -------> DataStore.persist_fund_list()
   |-- 遍历每只基金:
   |     |-- 拉净值历史 ---> DataStore.persist_nav_records()  (全量存，不管是否通过筛选)
   |     |-- MA 筛选
   |     |-- 如果通过:
+  |     |     |-- [CN] 标注申购限额 (从映射表 O(1) 查询)
+  |     |     |-- [可选] 申购过滤 (--purchase-filter 开启时)
   |     |     |-- 拉持仓 -> DataStore.persist_holdings()
   |     |     |-- 构建 FundInfo -> DataStore.persist_screening_result()
   |
   v
-生成 Markdown 报告
+生成 Markdown 报告 (CN 市场按申购状态分组)
 ```
 
 ### 添加新市场
