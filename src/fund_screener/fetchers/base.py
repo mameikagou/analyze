@@ -127,6 +127,15 @@ class BaseFetcher(ABC):
         """
         ...
 
+    def fetch_fund_detail(self, code: str) -> dict[str, Any]:
+        """
+        获取基金详情（成立日期、基金经理、规模、跟踪基准等）。
+
+        V2 新增可选方法，默认返回空 dict。
+        子类可选择性覆盖，不破坏 US/HK fetcher 的现有实现。
+        """
+        return {}
+
 
 def with_retry(max_retries: int = 3, backoff_sec: float = 2.0) -> Any:
     """

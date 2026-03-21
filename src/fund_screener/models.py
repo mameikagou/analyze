@@ -35,6 +35,10 @@ class Holding(BaseModel):
         default=None,
         description="持仓权重百分比，部分数据源可能拿不到",
     )
+    hold_shares: float | None = Field(
+        default=None,
+        description="持股数量（万股），V2 新增",
+    )
 
 
 class SectorWeight(BaseModel):
@@ -112,3 +116,86 @@ class ScreeningSummary(BaseModel):
     total_scanned: int = Field(description="扫描的基金总数")
     total_passed: int = Field(description="通过筛选的基金数")
     pass_rate: float = Field(description="通过率百分比")
+
+
+# =====================================================================
+# OLAP 量化分析模型 — v2 新增
+# =====================================================================
+
+
+class StockSectorMapping(BaseModel):
+    """
+    股票申万行业映射。
+
+    每只 A 股股票对应一个申万一级行业分类，
+    附带 is_hard_tech / is_resource 标签用于快速风格判定。
+    """
+    stock_code: str = Field(description="股票代码，如 '600519'")
+    stock_name: str = Field(default="", description="股票名称")
+    sw_sector_l1: str = Field(description="申万一级行业，如 '食品饮料'")
+    is_hard_tech: bool = Field(
+        default=False,
+        description="是否属于硬科技赛道（电子/计算机/通信/军工/电力设备）",
+    )
+    is_resource: bool = Field(
+        default=False,
+        description="是否属于资源类（煤炭/石油石化/有色/钢铁/基础化工）",
+    )
+
+
+class MomentumScanResult(BaseModel):
+    """
+    横截面动量扫描结果 — 单只基金的扫描快照。
+
+    筛选逻辑：MA_short > MA_long（多头排列）且 daily_return < 0（缩量回踩）。
+    这类标的处于趋势上行中的短期回调，是经典的"右侧回踩买入"信号。
+    """
+    fund_code: str = Field(description="基金代码")
+    fund_name: str = Field(default="", description="基金名称")
+    scan_date: str = Field(description="扫描日期 YYYY-MM-DD")
+    ma_short: float = Field(description="短期均线值")
+    ma_long: float = Field(description="长期均线值")
+    ma_diff_pct: float = Field(description="MA 差值百分比")
+    daily_return: float = Field(description="当日涨跌幅百分比")
+    latest_nav: float = Field(description="最新净值/价格")
+
+
+class StyleDriftResult(BaseModel):
+    """
+    风格漂移检测结果。
+
+    比较两个季度的 Top10 持仓变化，计算换手率，
+    标记新进/退出/大幅调仓的个股。
+    """
+    fund_code: str = Field(description="基金代码")
+    current_quarter: str = Field(description="当前季度标签，如 '2026-03-31'")
+    prev_quarter: str = Field(description="对比季度标签，如 '2025-12-31'")
+    total_turnover: float = Field(
+        description="总换手率百分比 = sum(|delta_weight|) / 2",
+    )
+    is_drifted: bool = Field(description="是否判定为风格漂移（超阈值）")
+    threshold: float = Field(description="漂移判定阈值百分比")
+    new_entries: list[str] = Field(
+        default_factory=list,
+        description="新进持仓股票代码列表",
+    )
+    exits: list[str] = Field(
+        default_factory=list,
+        description="退出持仓股票代码列表",
+    )
+    major_changes: list[dict[str, object]] = Field(
+        default_factory=list,
+        description="大幅调仓明细 [{'stock_code': ..., 'prev_weight': ..., 'curr_weight': ...}]",
+    )
+
+
+class CorrelationPair(BaseModel):
+    """
+    基金对相关性 — 两只基金之间的行业持仓相似度。
+
+    基于行业权重向量的余弦相似度，用于检测"买了看似不同、实际高度相关"的基金。
+    """
+    fund_a: str = Field(description="基金 A 代码")
+    fund_b: str = Field(description="基金 B 代码")
+    similarity: float = Field(description="余弦相似度 [0, 1]")
+    is_alert: bool = Field(description="是否超过报警阈值")

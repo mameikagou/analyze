@@ -47,3 +47,25 @@ rate_limit:
   etfdb_delay_sec: 1.0       # etfdb 爬虫间隔（更保守）
   max_retries: 3              # 最大重试次数
   retry_backoff_sec: 2.0      # 重试退避基数（指数退避）
+
+# ---------- V2: 异步批量抓取配置 ----------
+async:
+  concurrency: 10             # 最大并发数（Semaphore 控制）
+  batch_size: 50              # 每批处理数量
+  batch_sleep_min: 0.5        # 批次间休眠最小秒数
+  batch_sleep_max: 1.5        # 批次间休眠最大秒数
+
+# ---------- V2: 申万行业分类配置 ----------
+sector:
+  hard_tech:                  # 硬科技赛道
+    - "电子"
+    - "计算机"
+    - "通信"
+    - "国防军工"
+    - "电力设备"
+  resource:                   # 资源类赛道
+    - "煤炭"
+    - "石油石化"
+    - "有色金属"
+    - "钢铁"
+    - "基础化工"

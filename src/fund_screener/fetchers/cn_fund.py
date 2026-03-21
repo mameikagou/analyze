@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
+from typing import Any
 
 import pandas as pd
 
@@ -113,37 +114,88 @@ class CNFundFetcher(BaseFetcher):
     @with_retry(max_retries=3, backoff_sec=2.0)
     def fetch_nav_history(self, code: str, days: int) -> pd.DataFrame:
         """
-        获取单只 A 股基金的单位净值历史。
+        获取单只 A 股基金的净值历史（V2 增强：含复权净值）。
 
-        注意：用"单位净值走势"而非"累计净值走势"，
-        因为 MA 计算应该基于可交易的实际净值。
+        V2 改动：
+        - 同时获取"单位净值走势"和"累计净值走势"
+        - 返回 DataFrame 含 date, nav, unit_nav, cumulative_nav, adj_nav
+        - adj_nav = cumulative_nav（A 股基金的累计净值即复权净值）
+        - MA 计算仍基于 nav（单位净值），adj_nav 供 OLAP 分析用
 
         Returns:
-            DataFrame columns=["date", "nav"]，按日期升序
+            DataFrame columns=["date", "nav", "unit_nav", "cumulative_nav", "adj_nav"]
         """
         import akshare as ak
 
-        cache_key = self._cache_key(code, "nav_history")
+        cache_key = self._cache_key(code, "nav_history_v2")
         cached = self.cache.get(cache_key)
         if cached is not None:
             return pd.DataFrame(cached)
 
         self._rate_limit()
 
+        # 获取单位净值走势
         try:
-            # akshare >= 1.14 参数名从 fund 改成了 symbol
-            df = ak.fund_open_fund_info_em(symbol=code, indicator="单位净值走势")
+            df_unit = ak.fund_open_fund_info_em(symbol=code, indicator="单位净值走势")
         except Exception as e:
-            logger.warning("获取基金 %s 净值历史失败: %s", code, e)
-            return pd.DataFrame(columns=["date", "nav"])
+            logger.warning("获取基金 %s 单位净值失败: %s", code, e)
+            return pd.DataFrame(columns=["date", "nav", "unit_nav", "cumulative_nav", "adj_nav"])
 
-        if df is None or df.empty:
-            return pd.DataFrame(columns=["date", "nav"])
+        if df_unit is None or df_unit.empty:
+            return pd.DataFrame(columns=["date", "nav", "unit_nav", "cumulative_nav", "adj_nav"])
 
-        # 标准化列名
+        # 解析单位净值 DataFrame
+        result_df = self._parse_nav_dataframe(df_unit, code)
+        if result_df.empty:
+            return pd.DataFrame(columns=["date", "nav", "unit_nav", "cumulative_nav", "adj_nav"])
+
+        # 初始化 V2 列
+        result_df["unit_nav"] = result_df["nav"]
+        result_df["cumulative_nav"] = None
+        result_df["adj_nav"] = None
+
+        # 获取累计净值走势（额外请求，失败不影响主流程）
+        self._rate_limit()
+        try:
+            df_cum = ak.fund_open_fund_info_em(symbol=code, indicator="累计净值走势")
+            if df_cum is not None and not df_cum.empty:
+                cum_df = self._parse_nav_dataframe(df_cum, code)
+                if not cum_df.empty:
+                    # 按日期 merge
+                    cum_df = cum_df.rename(columns={"nav": "cum_nav"})
+                    result_df = result_df.merge(
+                        cum_df[["date", "cum_nav"]], on="date", how="left",
+                    )
+                    result_df["cumulative_nav"] = result_df["cum_nav"]
+                    # A 股基金的累计净值 = 复权净值（考虑了分红再投资）
+                    result_df["adj_nav"] = result_df["cum_nav"]
+                    result_df = result_df.drop(columns=["cum_nav"])
+        except Exception as e:
+            logger.debug("获取基金 %s 累计净值失败（不影响主流程）: %s", code, e)
+
+        # 只保留最近 N 天
+        if days > 0 and len(result_df) > 0:
+            cutoff = datetime.now() - timedelta(days=days)
+            result_df = result_df[result_df["date"] >= cutoff]
+
+        result_df = result_df.reset_index(drop=True)
+
+        # 缓存
+        cache_data = result_df.copy()
+        cache_data["date"] = cache_data["date"].dt.strftime("%Y-%m-%d")
+        self.cache.set(cache_key, cache_data.to_dict(orient="records"))
+
+        return result_df
+
+    def _parse_nav_dataframe(self, df: pd.DataFrame, code: str) -> pd.DataFrame:
+        """
+        解析 akshare 返回的净值 DataFrame，统一列名为 date + nav。
+
+        抽取为独立方法是因为 V2 增强后需要解析两次（单位净值 + 累计净值），
+        避免重复代码。
+        """
         df.columns = [c.lower().strip() for c in df.columns]
 
-        # 尝试识别日期列和净值列
         date_col = None
         nav_col = None
         for col in df.columns:
@@ -153,7 +205,6 @@ class CNFundFetcher(BaseFetcher):
             elif "净值" in col_str or "nav" in col_str or "单位净值" in col_str:
                 nav_col = col
 
-        # 如果找不到，按位置猜（第一列日期，第二列净值）
         if date_col is None and len(df.columns) >= 2:
             date_col = df.columns[0]
         if nav_col is None and len(df.columns) >= 2:
@@ -167,19 +218,7 @@ class CNFundFetcher(BaseFetcher):
             "date": pd.to_datetime(df[date_col]),
             "nav": pd.to_numeric(df[nav_col], errors="coerce"),
         })
-        result_df = result_df.dropna().sort_values("date").reset_index(drop=True)
-
-        # 只保留最近 N 天
-        if days > 0 and len(result_df) > 0:
-            cutoff = datetime.now() - timedelta(days=days)
-            result_df = result_df[result_df["date"] >= cutoff]
-
-        # 缓存（转为可序列化格式）
-        cache_data = result_df.copy()
-        cache_data["date"] = cache_data["date"].dt.strftime("%Y-%m-%d")
-        self.cache.set(cache_key, cache_data.to_dict(orient="records"))
-
-        return result_df
+        return result_df.dropna().sort_values("date").reset_index(drop=True)
 
     @with_retry(max_retries=3, backoff_sec=2.0)
     def fetch_holdings(self, code: str) -> list[Holding]:
@@ -221,6 +260,7 @@ class CNFundFetcher(BaseFetcher):
             stock_code = ""
             stock_name = ""
             weight = None
+            shares = None
 
             for col in df.columns:
                 col_str = str(col)
@@ -233,17 +273,85 @@ class CNFundFetcher(BaseFetcher):
                         weight = float(row[col])
                     except (ValueError, TypeError):
                         pass
+                elif "持股数" in col_str or "持仓股数" in col_str or "数量" in col_str:
+                    try:
+                        shares = float(row[col])
+                    except (ValueError, TypeError):
+                        pass
 
             if stock_code or stock_name:
                 holdings.append(Holding(
                     stock_code=stock_code,
                     stock_name=stock_name,
                     weight_pct=weight,
+                    hold_shares=shares,
                 ))
 
         # 缓存
         self.cache.set(cache_key, [h.model_dump() for h in holdings])
         return holdings
+
+    @with_retry(max_retries=3, backoff_sec=2.0)
+    def fetch_fund_detail(self, code: str) -> dict[str, Any]:
+        """
+        获取 A 股基金的详细信息（规模、成立日期、基金经理等）。
+
+        V2 新增方法，调用 ak.fund_individual_info_em()。
+        返回 dict 格式供 storage.persist_fund_detail() 使用。
+        """
+        import akshare as ak
+
+        cache_key = self._cache_key(code, "fund_detail")
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        self._rate_limit()
+
+        try:
+            # akshare 1.14+ 使用雪球数据源获取基金基本信息
+            df = ak.fund_individual_basic_info_xq(symbol=code)
+        except Exception as e:
+            logger.warning("获取基金 %s 详情失败: %s", code, e)
+            return {}
+
+        if df is None or df.empty:
+            return {}
+
+        # fund_individual_basic_info_xq 返回两列: [item, value]
+        # 例如: item="成立时间", value="2018-09-05"
+        detail: dict[str, Any] = {}
+        try:
+            info_map: dict[str, str] = {}
+            for _, row in df.iterrows():
+                key = str(row.iloc[0]).strip()
+                val = str(row.iloc[1]).strip()
+                if val and val != "<NA>":
+                    info_map[key] = val
+
+            # 映射到 storage.py 的字段名
+            for key, val in info_map.items():
+                if "成立时间" in key or "成立日期" in key:
+                    detail["establish_date"] = val
+                elif "基金经理" in key:
+                    detail["manager_name"] = val
+                elif "规模" in key:
+                    # 提取数字（如 "310.21亿" → 310.21）
+                    try:
+                        num_str = val.replace("亿元", "").replace("亿", "").strip()
+                        detail["fund_scale"] = float(num_str)
+                    except (ValueError, TypeError):
+                        pass
+                elif "业绩比较基准" in key:
+                    detail["track_benchmark"] = val
+        except Exception as e:
+            logger.warning("解析基金 %s 详情失败: %s", code, e)
+            return {}
+
+        if detail:
+            self.cache.set(cache_key, detail)
+
+        return detail
 
     def fetch_sector_exposure(self, code: str) -> list[SectorWeight]:
         """
