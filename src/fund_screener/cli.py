@@ -32,8 +32,9 @@ load_dotenv()
 from fund_screener.cache import FileCache
 from fund_screener.config import AppConfig, load_config
 from fund_screener.fetchers.base import BaseFetcher
-from fund_screener.fetchers.cn_tushare import CNTushareFetcher
+from fund_screener.fetchers.cn_composite import CompositeCNFetcher
 from fund_screener.fetchers.hk_etf import HKETFFetcher
+from fund_screener.fetchers.providers import AkshareCNProvider, TushareCNProvider
 from fund_screener.fetchers.us_etf import USETFFetcher
 from fund_screener.models import FundInfo, Market, ScreeningSummary
 from fund_screener.reporter import generate_report
@@ -58,6 +59,33 @@ def _setup_logging(verbose: bool) -> None:
         root_logger.addHandler(handler)
 
 
+def _build_cn_fetcher(config: AppConfig, cache: FileCache) -> BaseFetcher:
+    """
+    构建 A 股组合 Fetcher — 注册所有 provider,按 config.yaml 路由表派发。
+
+    扩展点:未来加第三家数据源(如同花顺),只需在这里 providers dict 多塞一个实例,
+    然后 yaml 里 route 指向它即可,CompositeCNFetcher 代码本身不动。
+    """
+    providers: dict[str, BaseFetcher] = {
+        "akshare": AkshareCNProvider(
+            cache=cache,
+            rate_limit_config=config.rate_limit,
+            cn_config=config.cn_fund,
+        ),
+        "tushare": TushareCNProvider(
+            cache=cache,
+            rate_limit_config=config.rate_limit,
+            cn_config=config.cn_fund,
+        ),
+    }
+    return CompositeCNFetcher(
+        cache=cache,
+        rate_limit_config=config.rate_limit,
+        cn_config=config.cn_fund,
+        providers=providers,
+    )
+
+
 def _create_fetchers(
     config: AppConfig,
     cache: FileCache,
@@ -72,11 +100,7 @@ def _create_fetchers(
     fetchers: dict[Market, BaseFetcher] = {}
 
     if Market.CN in markets and config.cn_fund.enabled:
-        fetchers[Market.CN] = CNTushareFetcher(
-            cache=cache,
-            rate_limit_config=config.rate_limit,
-            cn_config=config.cn_fund,
-        )
+        fetchers[Market.CN] = _build_cn_fetcher(config, cache)
 
     if Market.US in markets and config.us_etf.enabled:
         fetchers[Market.US] = USETFFetcher(
@@ -123,14 +147,17 @@ def _process_market(
     # 现在统一从 fund_nav 最近两日数据直接计算，逻辑在下方 Step 2 循环中。
 
     # Step 0.5: A 股市场预加载申购限额映射表（只要 annotate_purchase=true 就加载）
-    # tushare 版通过 fund_basic.status 判断，一次调用即可。
+    # 具体走哪家 provider 由 config.yaml 的 data_source.route 决定,
+    # CompositeCNFetcher 已用 hasattr 兜底,provider 不支持会返回空 dict。
     purchase_limit_map: dict[str, tuple[float, str]] = {}
-    if market == Market.CN and config.cn_fund.annotate_purchase:
+    if (
+        market == Market.CN
+        and config.cn_fund.annotate_purchase
+        and hasattr(fetcher, "fetch_purchase_limit_map")
+    ):
         try:
-            from fund_screener.fetchers.cn_tushare import CNTushareFetcher
-            if isinstance(fetcher, CNTushareFetcher):
-                logger.info("正在加载基金申购限额数据...")
-                purchase_limit_map = fetcher.fetch_purchase_limit_map()
+            logger.info("正在加载基金申购限额数据...")
+            purchase_limit_map = fetcher.fetch_purchase_limit_map()
         except Exception as e:
             logger.warning("加载申购限额数据失败（不影响主流程）: %s", e)
 

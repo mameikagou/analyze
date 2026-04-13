@@ -1,6 +1,7 @@
 # Tushare Pro API Skill — 实战经验手册
 
 > 边写代码边维护。记录实际使用过的 API、字段映射、踩坑经验。
+> **生效范围:** 仅在 `config.yaml` 的 `cn_fund.data_source.route` 指向 `tushare` 的方法时生效 —— 走 akshare 的方法不受本文影响。
 > 最后更新：2026-04-13
 
 ---

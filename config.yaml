@@ -31,6 +31,18 @@ cn_fund:
   filter_purchase: false        # 是否过滤限额不足的基金（默认关闭，CLI 用 --purchase-filter 开启）
   purchase_min_limit: 1000      # 申购过滤阈值（元），仅 filter_purchase=true 时生效
 
+  # 数据源路由 — 由 CompositeCNFetcher 按方法派发到不同 provider
+  # akshare 为主 + tushare 补充特定字段，详见 src/fund_screener/fetchers/cn_composite.py
+  data_source:
+    primary: akshare                          # 未命中 route 时的兜底主源
+    route:
+      fetch_fund_list: akshare                # akshare 排名数据更全
+      fetch_nav_history: tushare              # ← tushare 补充: 付费 SLA 规范净值
+      fetch_holdings: akshare                 # akshare 独占 hold_shares 持股数
+      fetch_sector_exposure: akshare          # tushare 无此接口
+      fetch_fund_detail: akshare              # akshare 独占基金经理/成立日/规模/基准
+      fetch_purchase_limit_map: akshare       # akshare 独占精确金额，tushare 只有二元状态
+
 # ---------- 美股 ETF ----------
 us_etf:
   enabled: true
@@ -46,6 +58,7 @@ hk_etf:
 # ---------- 限速配置 ----------
 rate_limit:
   tushare_delay_sec: 0.3     # tushare Pro 请求间隔（付费 API，限速宽松）
+  akshare_delay_sec: 0.5     # akshare 请求间隔（爬东财，太快被封）
   yfinance_delay_sec: 0.3    # yfinance 请求间隔
   etfdb_delay_sec: 1.0       # etfdb 爬虫间隔（更保守）
   max_retries: 3              # 最大重试次数

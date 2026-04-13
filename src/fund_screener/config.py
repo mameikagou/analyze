@@ -16,6 +16,32 @@ from pydantic import BaseModel, Field
 
 # ---- 子配置模型 ----
 
+class CNDataSourceConfig(BaseModel):
+    """
+    A股数据源路由配置 — 组合 fetcher 的核心开关。
+
+    设计思路：
+    - primary 是"未命中 route 时的兜底主源"
+    - route 是"每个抽象方法具体走哪家 provider"，key 为 BaseFetcher 方法名
+    - 不在 route 里的方法默认走 primary，避免新增方法时忘了配
+    """
+    primary: str = Field(
+        default="akshare",
+        description="主数据源（route 未命中时的兜底），可选: akshare / tushare",
+    )
+    route: dict[str, str] = Field(
+        default_factory=lambda: {
+            "fetch_fund_list": "akshare",
+            "fetch_nav_history": "tushare",   # tushare 补充：规范 SLA 净值
+            "fetch_holdings": "akshare",
+            "fetch_sector_exposure": "akshare",
+            "fetch_fund_detail": "akshare",
+            "fetch_purchase_limit_map": "akshare",
+        },
+        description="方法→provider 路由表，key 为 BaseFetcher 方法名",
+    )
+
+
 class CNFundConfig(BaseModel):
     """A股公募基金配置"""
     enabled: bool = True
@@ -32,6 +58,10 @@ class CNFundConfig(BaseModel):
     purchase_min_limit: float = Field(
         default=1000.0,
         description="申购过滤阈值（元），仅 filter_purchase=true 时生效",
+    )
+    data_source: CNDataSourceConfig = Field(
+        default_factory=CNDataSourceConfig,
+        description="数据源路由配置，支持多 provider 组合",
     )
 
 
@@ -51,6 +81,7 @@ class HKETFConfig(BaseModel):
 class RateLimitConfig(BaseModel):
     """限速配置 — 防止被数据源封 IP"""
     tushare_delay_sec: float = 0.3
+    akshare_delay_sec: float = 0.5   # akshare 爬东财，必须保守限速防封 IP
     yfinance_delay_sec: float = 0.3
     etfdb_delay_sec: float = 1.0
     max_retries: int = 3
