@@ -834,5 +834,247 @@ def cmd_bulk_fetch(
     click.echo()
 
 
+# =====================================================================
+# 子命令 5: score — 量化打分排行榜
+# =====================================================================
+
+@main.command("score")
+@click.option(
+    "--market",
+    default="all",
+    type=click.Choice(["cn", "us", "hk", "all"], case_sensitive=False),
+    help="打分市场范围 (默认 all)",
+)
+@click.option("--top-n", default=None, type=int, help="输出 Top N (默认读 config.yaml)")
+@click.option(
+    "--output", "output_path",
+    default=None,
+    help="输出报告路径 (默认 output/scored_report.md)",
+    type=click.Path(),
+)
+@click.pass_context
+def cmd_score(
+    ctx: click.Context,
+    market: str,
+    top_n: int | None,
+    output_path: str | None,
+) -> None:
+    """
+    量化打分排行榜 — 从数据库已有数据中选出 Top N 基金。
+
+    前置条件：需要先跑一次数据采集（uv run fund-screener --market all）
+    确保 DataStore 里有基金列表和净值数据。
+
+    流程：DB 读数据 → fund_types 过滤 → QDII 债基名称过滤
+    → 三因子计算 → Z-Score 标准化 → 加权排名 → 输出 Markdown
+    """
+    import sqlite3
+
+    import pandas as pd
+
+    from fund_screener.models import FundInfo, Market as MktEnum, TrendStats
+    from fund_screener.reporter import generate_scored_report
+    from fund_screener.scoring import score_funds
+    from fund_screener.screener import calculate_trend_stats
+
+    config = load_config(ctx.obj["config_path"])
+    _setup_logging(ctx.obj.get("verbose", False))
+
+    if not Path(config.db_path).exists():
+        click.echo("错误: 数据库不存在，请先运行 uv run fund-screener --market all")
+        sys.exit(1)
+
+    effective_top_n = top_n if top_n is not None else config.scoring.top_n
+
+    # 确定市场范围
+    if market == "all":
+        market_filter = None  # 不限制市场
+    else:
+        market_filter = market.upper()
+
+    with DataStore(config.db_path) as store:
+        conn = store.get_connection()
+
+        # Step 1: 查询符合条件的基金列表
+        # 从 funds 表读取，附带详情字段
+        fund_query = """
+        SELECT id, market, code, name
+        FROM funds
+        """
+        params: list[str] = []
+        if market_filter:
+            fund_query += " WHERE market = ?"
+            params.append(market_filter)
+
+        try:
+            fund_rows = conn.execute(fund_query, params).fetchall()
+        except sqlite3.Error as e:
+            click.echo(f"查询基金列表失败: {e}")
+            sys.exit(1)
+
+        if not fund_rows:
+            click.echo("数据库中无基金数据，请先运行数据采集")
+            return
+
+        click.echo(f"数据库中共 {len(fund_rows)} 只基金")
+
+        # Step 2: 为每只基金读取净值序列，组装 (FundInfo, nav_df) 对
+        funds_with_nav: list[tuple[FundInfo, pd.DataFrame]] = []
+        skipped_no_nav = 0
+
+        for fund_id, mkt, code, name in fund_rows:
+            # 读取全量净值（不受 lookback_days 限制，打分需要更长历史）
+            try:
+                nav_rows = conn.execute(
+                    """
+                    SELECT date, COALESCE(adj_nav, nav) AS nav
+                    FROM nav_records
+                    WHERE fund_id = ?
+                    ORDER BY date ASC
+                    """,
+                    (fund_id,),
+                ).fetchall()
+            except sqlite3.Error:
+                continue
+
+            if len(nav_rows) < config.scoring.min_nav_days:
+                skipped_no_nav += 1
+                continue
+
+            nav_df = pd.DataFrame(nav_rows, columns=["date", "nav"])
+            nav_df["nav"] = nav_df["nav"].astype(float)
+
+            # 从 nav_df 计算趋势统计
+            trend_stats = calculate_trend_stats(nav_df)
+
+            # 计算当日涨跌幅
+            daily_change: float | None = None
+            if len(nav_df) >= 2:
+                today = float(nav_df["nav"].iloc[-1])
+                yesterday = float(nav_df["nav"].iloc[-2])
+                if yesterday != 0:
+                    daily_change = round((today - yesterday) / yesterday * 100, 2)
+
+            latest_nav = float(nav_df["nav"].iloc[-1])
+            latest_date_str = str(nav_df["date"].iloc[-1])
+
+            # 构造简化版 FundInfo（score 子命令不拉持仓/行业，只做打分）
+            # 持仓数据后续从 DB 补充（如果需要输出到报告）
+            try:
+                market_enum = MktEnum(mkt)
+            except ValueError:
+                continue
+
+            from datetime import date as date_type, datetime as dt_type
+
+            try:
+                data_date = dt_type.strptime(latest_date_str, "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                data_date = date_type.today()
+
+            fund_info = FundInfo(
+                code=code,
+                name=name or code,
+                market=market_enum,
+                nav=latest_nav,
+                ma_short=0.0,  # 打分不依赖 MA，占位
+                ma_long=0.0,
+                ma_diff_pct=0.0,
+                daily_change_pct=daily_change,
+                trend_stats=trend_stats,
+                data_date=data_date,
+            )
+
+            funds_with_nav.append((fund_info, nav_df))
+
+        click.echo(
+            f"参与打分: {len(funds_with_nav)} 只 "
+            f"(跳过 {skipped_no_nav} 只数据不足)"
+        )
+
+        # Step 3: 补充 Top 10 持仓（从 DB 读，不调 API）
+        for fund_info, _ in funds_with_nav:
+            try:
+                holding_rows = conn.execute(
+                    """
+                    SELECT h.stock_code, h.stock_name, h.weight_pct
+                    FROM holdings h
+                    JOIN funds f ON h.fund_id = f.id
+                    WHERE f.code = ?
+                      AND h.snapshot_date = (
+                          SELECT MAX(h2.snapshot_date)
+                          FROM holdings h2
+                          JOIN funds f2 ON h2.fund_id = f2.id
+                          WHERE f2.code = ?
+                      )
+                    ORDER BY COALESCE(h.weight_pct, 0) DESC
+                    LIMIT 10
+                    """,
+                    (fund_info.code, fund_info.code),
+                ).fetchall()
+
+                from fund_screener.models import Holding
+
+                fund_info.top_holdings = [
+                    Holding(
+                        stock_code=r[0],
+                        stock_name=r[1] or "",
+                        weight_pct=float(r[2]) if r[2] is not None else None,
+                    )
+                    for r in holding_rows
+                ]
+            except sqlite3.Error:
+                pass  # 持仓拿不到不影响打分
+
+    # Step 4: 调用打分引擎
+    scored = score_funds(
+        funds_with_nav=funds_with_nav,
+        weights=config.scoring.weights,
+        top_n=effective_top_n,
+        min_nav_days=config.scoring.min_nav_days,
+    )
+
+    if not scored:
+        click.echo("没有基金通过打分！可能数据量不足或全部被过滤。")
+        return
+
+    # Step 5: 终端输出 Top N 摘要
+    click.echo()
+    weights_desc = (
+        f"动量{config.scoring.weights.momentum:.0%} + "
+        f"回撤{config.scoring.weights.drawdown:.0%} + "
+        f"夏普{config.scoring.weights.sharpe:.0%}"
+    )
+    click.echo(f"量化打分排行榜 Top {len(scored)} ({weights_desc})")
+    click.echo("=" * 100)
+    click.echo(
+        f"  {'#':>3s}  {'代码':<10s} {'名称':<24s} {'市场':>4s} "
+        f"{'总分':>8s} {'动量':>8s} {'回撤':>8s} {'夏普':>6s}",
+    )
+    click.echo("-" * 100)
+
+    for sf in scored:
+        f = sf.fund
+        m = sf.risk_metrics
+        click.echo(
+            f"  {sf.rank:>3d}  {f.code:<10s} {f.name[:22]:<24s} {f.market.value:>4s} "
+            f"{sf.composite_score:>+8.4f} {m.momentum:>+8.4f} "
+            f"{m.max_drawdown:>+7.2%} {m.sharpe:>6.2f}",
+        )
+
+    click.echo("-" * 100)
+    click.echo()
+
+    # Step 6: 生成 Markdown 报告
+    report_path = output_path or f"{config.output_dir}/scored_report.md"
+    result_path = generate_scored_report(
+        scored_funds=scored,
+        weights_desc=weights_desc,
+        output_path=report_path,
+    )
+    click.echo(f"报告已生成: {result_path}")
+    click.echo("下一步: 把报告文件拖进 Claude / Gemini AI Studio 进行深度分析")
+
+
 if __name__ == "__main__":
     main()

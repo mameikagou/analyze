@@ -207,3 +207,44 @@ class CorrelationPair(BaseModel):
     fund_b: str = Field(description="基金 B 代码")
     similarity: float = Field(description="余弦相似度 [0, 1]")
     is_alert: bool = Field(description="是否超过报警阈值")
+
+
+# =====================================================================
+# V4: 量化打分模型
+# =====================================================================
+
+
+class RiskMetrics(BaseModel):
+    """
+    单只基金的风险指标快照 — 三因子"体检报告"。
+
+    这是运行时从净值序列实时计算的派生值，不入库。
+    详见 specs/quant_scoring_spec.md 的公式定义。
+    """
+    momentum: float = Field(
+        description="趋势爆发力 = (latest_nav - MA20) / MA20",
+    )
+    max_drawdown: float = Field(
+        description="最大回撤百分比（负数，如 -0.25 = -25%）",
+    )
+    sharpe: float = Field(
+        description="年化夏普比率",
+    )
+    nav_count: int = Field(
+        description="用于计算的净值条数（数据充足性参考）",
+    )
+
+
+class ScoredFund(BaseModel):
+    """
+    打分后的基金 — 携带原始 FundInfo + 风险指标 + 综合得分。
+
+    由 scoring.py 的 score_funds() 生成，按 composite_score 降序排列。
+    """
+    fund: FundInfo = Field(description="原始基金信息")
+    risk_metrics: RiskMetrics = Field(description="三因子风险指标")
+    z_momentum: float = Field(description="趋势爆发力 Z-Score")
+    z_drawdown: float = Field(description="回撤 Z-Score（已反转，值大=回撤小）")
+    z_sharpe: float = Field(description="夏普 Z-Score")
+    composite_score: float = Field(description="加权总分")
+    rank: int = Field(description="排名（1 = 最高分）")

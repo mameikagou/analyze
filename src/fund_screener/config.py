@@ -88,6 +88,36 @@ class RateLimitConfig(BaseModel):
     retry_backoff_sec: float = 2.0
 
 
+# ---- V4: 量化打分配置 ----
+
+class ScoringWeights(BaseModel):
+    """
+    打分权重配置。
+
+    三因子权重之和应为 1.0，但代码不强制校验（允许实验性权重）。
+    默认值来自用户决策：趋势 40% + 回撤 30% + 夏普 30%。
+    详见 specs/quant_scoring_spec.md §5。
+    """
+    momentum: float = Field(default=0.4, description="趋势爆发力权重")
+    drawdown: float = Field(default=0.3, description="最大回撤权重")
+    sharpe: float = Field(default=0.3, description="夏普比率权重")
+
+
+class ScoringConfig(BaseModel):
+    """
+    量化打分引擎配置。
+
+    控制打分行为：是否启用、Top N 截取数量、最低数据量门槛。
+    """
+    enabled: bool = Field(default=True, description="是否启用打分引擎")
+    weights: ScoringWeights = Field(default_factory=ScoringWeights)
+    top_n: int = Field(default=30, description="输出 Top N 排名")
+    min_nav_days: int = Field(
+        default=60,
+        description="净值不足此天数的基金不参与打分（数据不够算出来不靠谱）",
+    )
+
+
 # ---- 主配置 ----
 
 class AppConfig(BaseModel):
@@ -112,6 +142,7 @@ class AppConfig(BaseModel):
     us_etf: USETFConfig = Field(default_factory=USETFConfig)
     hk_etf: HKETFConfig = Field(default_factory=HKETFConfig)
     rate_limit: RateLimitConfig = Field(default_factory=RateLimitConfig)
+    scoring: ScoringConfig = Field(default_factory=ScoringConfig)
 
 
 def load_config(config_path: str | Path = "config.yaml") -> AppConfig:

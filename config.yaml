@@ -26,6 +26,7 @@ cn_fund:
     - "股票型"
     - "混合型"
     - "指数型"
+    - "QDII型"     # V4 新增：海外权益资产通道（QDII 债基在打分时按名称二次过滤）
   max_funds: 500      # 最多处理多少只（防止跑太久，设 0 不限制）
   annotate_purchase: true       # 是否标注申购限额信息（默认开启，仅标注不过滤）
   filter_purchase: false        # 是否过滤限额不足的基金（默认关闭，CLI 用 --purchase-filter 开启）
@@ -63,6 +64,16 @@ rate_limit:
   etfdb_delay_sec: 1.0       # etfdb 爬虫间隔（更保守）
   max_retries: 3              # 最大重试次数
   retry_backoff_sec: 2.0      # 重试退避基数（指数退避）
+
+# ---------- V4: 量化打分配置 ----------
+scoring:
+  enabled: true
+  top_n: 30                   # 输出 Top N 排名
+  min_nav_days: 60            # 净值不足此天数的基金不参与打分
+  weights:
+    momentum: 0.4             # 趋势爆发力权重（用户决策：40%）
+    drawdown: 0.3             # 最大回撤权重（用户决策：30%）
+    sharpe: 0.3               # 夏普比率权重（用户决策：30%）
 
 # ---------- V2: 异步批量抓取配置 ----------
 async:
