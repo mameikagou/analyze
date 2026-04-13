@@ -45,7 +45,7 @@ hk_etf:
 
 # ---------- 限速配置 ----------
 rate_limit:
-  akshare_delay_sec: 0.5     # akshare 每次请求间隔（底层爬东财，太快被封）
+  tushare_delay_sec: 0.3     # tushare Pro 请求间隔（付费 API，限速宽松）
   yfinance_delay_sec: 0.3    # yfinance 请求间隔
   etfdb_delay_sec: 1.0       # etfdb 爬虫间隔（更保守）
   max_retries: 3              # 最大重试次数

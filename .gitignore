@@ -25,6 +25,8 @@ output/
 
 # Database
 *.db
+*.db-shm
+*.db-wal
 
 # Env
 .env

@@ -8,6 +8,8 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
+    "tushare>=1.4.0",
+    "python-dotenv>=1.0",
     "akshare>=1.14.0",
     "yfinance>=0.2.36",
     "pandas>=2.0",

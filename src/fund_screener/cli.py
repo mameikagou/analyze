@@ -23,12 +23,16 @@ import sys
 from pathlib import Path
 
 import click
+from dotenv import load_dotenv
 from tqdm import tqdm
+
+# 尽早加载 .env，确保 TUSHARE_TOKEN 等环境变量在模块导入前就位
+load_dotenv()
 
 from fund_screener.cache import FileCache
 from fund_screener.config import AppConfig, load_config
 from fund_screener.fetchers.base import BaseFetcher
-from fund_screener.fetchers.cn_fund import CNFundFetcher
+from fund_screener.fetchers.cn_tushare import CNTushareFetcher
 from fund_screener.fetchers.hk_etf import HKETFFetcher
 from fund_screener.fetchers.us_etf import USETFFetcher
 from fund_screener.models import FundInfo, Market, ScreeningSummary
@@ -68,7 +72,7 @@ def _create_fetchers(
     fetchers: dict[Market, BaseFetcher] = {}
 
     if Market.CN in markets and config.cn_fund.enabled:
-        fetchers[Market.CN] = CNFundFetcher(
+        fetchers[Market.CN] = CNTushareFetcher(
             cache=cache,
             rate_limit_config=config.rate_limit,
             cn_config=config.cn_fund,
@@ -114,44 +118,17 @@ def _process_market(
     logger.info("=" * 50)
     logger.info("开始处理: %s", label)
 
-    # Step 0: A 股市场预加载当日涨跌幅映射表
-    cn_daily_map: dict[str, float] = {}
-    if market == Market.CN:
-        try:
-            import akshare as ak
-
-            logger.info("正在获取 A 股当日涨跌幅数据...")
-            daily_df = ak.fund_open_fund_daily_em()
-            if daily_df is not None and not daily_df.empty:
-                code_col: str | None = None
-                change_col: str | None = None
-                for col in daily_df.columns:
-                    col_str = str(col)
-                    if "代码" in col_str:
-                        code_col = col
-                    elif "日增长率" in col_str:
-                        change_col = col
-
-                if code_col is not None and change_col is not None:
-                    for _, row in daily_df.iterrows():
-                        try:
-                            cn_daily_map[str(row[code_col]).strip()] = float(row[change_col])
-                        except (ValueError, TypeError):
-                            pass
-                    logger.info("A 股当日涨跌幅加载完成: %d 只基金", len(cn_daily_map))
-                else:
-                    logger.warning("A 股当日涨跌幅数据列名不匹配: %s", list(daily_df.columns))
-        except Exception as e:
-            logger.warning("获取 A 股当日涨跌幅数据失败（不影响主流程）: %s", e)
+    # Step 0: 当日涨跌幅不再需要预加载
+    # 旧版 akshare 需要单独调用 fund_open_fund_daily_em() 获取全市场涨跌幅，
+    # 现在统一从 fund_nav 最近两日数据直接计算，逻辑在下方 Step 2 循环中。
 
     # Step 0.5: A 股市场预加载申购限额映射表（只要 annotate_purchase=true 就加载）
-    # 为什么在循环外加载？fund_purchase_em() 返回 2.6 万条数据，5-10 秒，
-    # 只调一次然后用 dict O(1) 查询，比每只基金单独查快 400 倍。
+    # tushare 版通过 fund_basic.status 判断，一次调用即可。
     purchase_limit_map: dict[str, tuple[float, str]] = {}
     if market == Market.CN and config.cn_fund.annotate_purchase:
         try:
-            from fund_screener.fetchers.cn_fund import CNFundFetcher
-            if isinstance(fetcher, CNFundFetcher):
+            from fund_screener.fetchers.cn_tushare import CNTushareFetcher
+            if isinstance(fetcher, CNTushareFetcher):
                 logger.info("正在加载基金申购限额数据...")
                 purchase_limit_map = fetcher.fetch_purchase_limit_map()
         except Exception as e:
@@ -238,18 +215,15 @@ def _process_market(
             # 计算多周期涨跌幅（从已有 nav_df 直接算，零额外请求）
             trend_stats = calculate_trend_stats(nav_df)
 
-            # 计算当日涨跌幅
+            # 计算当日涨跌幅（所有市场统一从 nav_df 最近两日算）
             daily_change: float | None = None
-            if market == Market.CN:
-                daily_change = cn_daily_map.get(code)
-            else:
-                if len(nav_df) >= 2:
-                    today_nav = float(nav_df["nav"].iloc[-1])
-                    yesterday_nav = float(nav_df["nav"].iloc[-2])
-                    if yesterday_nav != 0:
-                        daily_change = round(
-                            (today_nav - yesterday_nav) / yesterday_nav * 100, 2,
-                        )
+            if len(nav_df) >= 2:
+                today_nav = float(nav_df["nav"].iloc[-1])
+                yesterday_nav = float(nav_df["nav"].iloc[-2])
+                if yesterday_nav != 0:
+                    daily_change = round(
+                        (today_nav - yesterday_nav) / yesterday_nav * 100, 2,
+                    )
 
             # 获取最新净值
             latest_nav = float(nav_df["nav"].iloc[-1])

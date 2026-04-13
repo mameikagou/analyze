@@ -50,7 +50,7 @@ class HKETFConfig(BaseModel):
 
 class RateLimitConfig(BaseModel):
     """限速配置 — 防止被数据源封 IP"""
-    akshare_delay_sec: float = 0.5
+    tushare_delay_sec: float = 0.3
     yfinance_delay_sec: float = 0.3
     etfdb_delay_sec: float = 1.0
     max_retries: int = 3
