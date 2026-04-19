@@ -11,7 +11,7 @@
  */
 
 import { motion } from 'framer-motion'
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, type LucideIcon } from 'lucide-react'
 import { presence, transition } from '@/styles/tokens.animation'
 
 interface StatsCardProps {
@@ -25,6 +25,8 @@ interface StatsCardProps {
   trend?: 'up' | 'down' | 'neutral'
   /** 趋势百分比或描述 */
   trendValue?: string
+  /** 左侧图标（Lucide icon component） */
+  icon?: LucideIcon
 }
 
 export function StatsCard({
@@ -33,6 +35,7 @@ export function StatsCard({
   subtitle,
   trend = 'neutral',
   trendValue,
+  icon: Icon,
 }: StatsCardProps) {
   const TrendIcon = trend === 'up'
     ? TrendingUp
@@ -56,9 +59,14 @@ export function StatsCard({
     >
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <p className="text-sm font-medium text-[var(--text-muted)]">
-            {title}
-          </p>
+          <div className="flex items-center gap-2">
+            {Icon && (
+              <Icon className="h-4 w-4 text-[var(--text-muted)]" />
+            )}
+            <p className="text-sm font-medium text-[var(--text-muted)]">
+              {title}
+            </p>
+          </div>
           <p className="text-2xl font-bold tabular-nums tracking-tight text-[var(--text-primary)]">
             {value}
           </p>

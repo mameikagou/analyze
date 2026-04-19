@@ -1,113 +1,72 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useFunds } from '@/hooks/useFunds'
+/**
+ * 基金列表页 — /funds/
+ *
+ * 职责：展示全市场基金基础信息列表，支持行点击跳转详情页。
+ * 零样式页面，只负责数据获取和组件组合。
+ *
+ * 修改说明（2026-04-19）：
+ *   - 从 legacy hooks/useFunds（mock 数据）迁移到 hooks/api/useFunds（真实 API）。
+ *   - 数据契约变化：Fund[]（含 MA 指标）→ PaginatedFundsResponse（FundSummary[]，仅 code/name/market）。
+ *   - MA 指标移至筛选页（/screening）展示，列表页保持简洁。
+ *   - 使用 FundTable 组件（已适配 FundSummary[]），添加 onRowClick 跳转详情。
+ *   - 保留分页结构（当前展示全部，分页 UI 后续补充）。
+ *   - 潜在副作用：legacy hooks/useFunds.ts 不再被引用，后续可安全删除。
+ */
+
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Loader2, AlertCircle } from 'lucide-react'
+import { useFunds } from '@/hooks/api'
+import { FundTable } from '@/components/views/FundTable'
 
 export const Route = createFileRoute('/funds/')({
   component: FundsPage,
 })
 
 function FundsPage() {
-  const { data: funds, isLoading } = useFunds()
+  const navigate = useNavigate()
+  const { data: response, isLoading, error } = useFunds({ page: 1, pageSize: 100 })
+
+  const funds = response?.data ?? []
+
+  /* ── 加载中 ────────────────────────────────────────────── */
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+        <p className="text-sm text-[var(--text-muted)]">加载基金列表...</p>
+      </div>
+    )
+  }
+
+  /* ── 错误 ──────────────────────────────────────────────── */
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <AlertCircle className="h-8 w-8 text-[var(--red-600)]" />
+        <p className="text-sm text-[var(--text-muted)]">加载失败，请稍后重试</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
+      {/* 标题 */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">基金列表</h2>
-        <p className="text-sm text-muted-foreground">
-          全市场基金基础信息一览
+        <h2 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          基金列表
+        </h2>
+        <p className="text-sm text-[var(--text-muted)]">
+          全市场基金基础信息一览 — 共 {funds.length} 只
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>基金概览</CardTitle>
-          <CardDescription>共 {funds?.length ?? 0} 只基金</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>代码</TableHead>
-                  <TableHead>名称</TableHead>
-                  <TableHead>市场</TableHead>
-                  <TableHead>MA20</TableHead>
-                  <TableHead>MA60</TableHead>
-                  <TableHead>MA差值%</TableHead>
-                  <TableHead>评分</TableHead>
-                  <TableHead>申购状态</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {funds?.map((fund) => (
-                  <TableRow key={fund.id}>
-                    <TableCell className="font-mono font-medium">{fund.code}</TableCell>
-                    <TableCell>{fund.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{fund.market}</Badge>
-                    </TableCell>
-                    <TableCell>{fund.maShort.toFixed(2)}</TableCell>
-                    <TableCell>{fund.maLong.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <span className={fund.maDiffPct > 0 ? 'text-green-600' : 'text-red-600'}>
-                        {fund.maDiffPct > 0 ? '+' : ''}
-                        {fund.maDiffPct.toFixed(2)}%
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {fund.score !== undefined ? (
-                        <Badge
-                          variant={fund.score >= 80 ? 'default' : 'secondary'}
-                        >
-                          {fund.score}
-                        </Badge>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {fund.purchaseStatus ? (
-                        <Badge
-                          variant={
-                            fund.purchaseStatus === 'normal'
-                              ? 'default'
-                              : fund.purchaseStatus === 'limited'
-                                ? 'secondary'
-                                : 'destructive'
-                          }
-                        >
-                          {fund.purchaseStatus === 'normal' && '正常'}
-                          {fund.purchaseStatus === 'limited' && '限额'}
-                          {fund.purchaseStatus === 'suspended' && '暂停'}
-                          {fund.purchaseStatus === 'unknown' && '未知'}
-                        </Badge>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {/* 基金表格 */}
+      <FundTable
+        funds={funds}
+        onRowClick={(code) => {
+          navigate({ to: '/funds/$code', params: { code } })
+        }}
+      />
     </div>
   )
 }

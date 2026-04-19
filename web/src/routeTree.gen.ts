@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ScreeningIndexRouteImport } from './routes/screening/index'
 import { Route as FundsIndexRouteImport } from './routes/funds/index'
 import { Route as ChatIndexRouteImport } from './routes/chat/index'
+import { Route as FundsCodeRouteImport } from './routes/funds/$code'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,15 +35,22 @@ const ChatIndexRoute = ChatIndexRouteImport.update({
   path: '/chat/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FundsCodeRoute = FundsCodeRouteImport.update({
+  id: '/funds/$code',
+  path: '/funds/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/funds/$code': typeof FundsCodeRoute
   '/chat/': typeof ChatIndexRoute
   '/funds/': typeof FundsIndexRoute
   '/screening/': typeof ScreeningIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/funds/$code': typeof FundsCodeRoute
   '/chat': typeof ChatIndexRoute
   '/funds': typeof FundsIndexRoute
   '/screening': typeof ScreeningIndexRoute
@@ -50,20 +58,22 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/funds/$code': typeof FundsCodeRoute
   '/chat/': typeof ChatIndexRoute
   '/funds/': typeof FundsIndexRoute
   '/screening/': typeof ScreeningIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chat/' | '/funds/' | '/screening/'
+  fullPaths: '/' | '/funds/$code' | '/chat/' | '/funds/' | '/screening/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chat' | '/funds' | '/screening'
-  id: '__root__' | '/' | '/chat/' | '/funds/' | '/screening/'
+  to: '/' | '/funds/$code' | '/chat' | '/funds' | '/screening'
+  id: '__root__' | '/' | '/funds/$code' | '/chat/' | '/funds/' | '/screening/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  FundsCodeRoute: typeof FundsCodeRoute
   ChatIndexRoute: typeof ChatIndexRoute
   FundsIndexRoute: typeof FundsIndexRoute
   ScreeningIndexRoute: typeof ScreeningIndexRoute
@@ -99,11 +109,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/funds/$code': {
+      id: '/funds/$code'
+      path: '/funds/$code'
+      fullPath: '/funds/$code'
+      preLoaderRoute: typeof FundsCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FundsCodeRoute: FundsCodeRoute,
   ChatIndexRoute: ChatIndexRoute,
   FundsIndexRoute: FundsIndexRoute,
   ScreeningIndexRoute: ScreeningIndexRoute,
