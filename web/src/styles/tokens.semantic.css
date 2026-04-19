@@ -1,0 +1,102 @@
+/**
+ * Semantic Tokens — 语义令牌
+ *
+ * 这是 Skill 里唯一允许 AI 直接使用的 Token 层。
+ * 切换暗色模式时只改这一层的映射。
+ *
+ * 规则：
+ * - 禁止在组件中写 HEX / rgb / hsl 字面量
+ * - 禁止直接使用 Primitive Token（如 --stone-500）
+ * - 所有颜色必须从本文件查表
+ */
+
+/* ── Light Mode（默认）───────────────────────────────────── */
+:root {
+  /* 背景梯度：canvas → surface → elevated */
+  --bg-canvas:    var(--stone-50);    /* 页面最底层底色 */
+  --bg-surface:   #ffffff;            /* 卡片、消息区 */
+  --bg-elevated:  #ffffff;            /* 弹层、面板、下拉菜单 */
+  --bg-hover:     var(--stone-100);   /* hover 状态 */
+  --bg-active:    var(--stone-200);   /* active/pressed 状态 */
+  --bg-selected:  var(--stone-150);   /* 选中状态 */
+
+  /* 文字梯度：primary → secondary → muted → faint */
+  --text-primary:   var(--stone-900);  /* 标题、正文 */
+  --text-secondary: var(--stone-600);  /* 次要信息 */
+  --text-muted:     var(--stone-500);  /* 辅助文字、placeholder */
+  --text-faint:     var(--stone-400);  /* 最淡的文字、禁用状态 */
+  --text-inverse:   #ffffff;           /* 深色背景上的文字 */
+  --text-link:      var(--orange-600); /* 链接色 */
+  --text-link-hover: var(--orange-700);/* 链接 hover */
+
+  /* 边框 */
+  --border-subtle:  var(--stone-200);  /* 最淡的分割线、卡片边框 */
+  --border-hover:   var(--stone-300);  /* hover 时的边框 */
+  --border-active:  var(--stone-400);  /* active/focus 时的边框 */
+
+  /* Focus Ring */
+  --ring-focus:     var(--stone-400);  /* 极淡的 focus ring */
+  --ring-focus-width: 2px;
+  --ring-offset:    2px;
+
+  /* 强调色 */
+  --accent-primary:         var(--orange-500);
+  --accent-primary-hover:   var(--orange-600);
+  --accent-primary-subtle:  var(--orange-100);
+  --accent-success:         var(--green-500);
+  --accent-success-subtle:  var(--green-100);
+  --accent-error:           var(--red-500);
+  --accent-error-subtle:    var(--red-100);
+  --accent-info:            var(--blue-500);
+  --accent-info-subtle:     var(--blue-100);
+
+  /* 阴影 — Claude 极少用阴影，基本只有 focus ring 和 elevated 面板 */
+  --shadow-elevated: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-dropdown: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-focus:    0 0 0 var(--ring-focus-width) var(--ring-focus);
+
+  /* 遮罩 */
+  --overlay-backdrop: rgba(0, 0, 0, 0.25);
+
+  /* 滚动条 */
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: var(--stone-300);
+  --scrollbar-thumb-hover: var(--stone-400);
+}
+
+/* ── Dark Mode ───────────────────────────────────────────── */
+.dark {
+  --bg-canvas:    var(--stone-950);
+  --bg-surface:   var(--stone-900);
+  --bg-elevated:  var(--stone-800);
+  --bg-hover:     var(--stone-800);
+  --bg-active:    var(--stone-700);
+  --bg-selected:  var(--stone-850);
+
+  --text-primary:   var(--stone-100);
+  --text-secondary: var(--stone-300);
+  --text-muted:     var(--stone-400);
+  --text-faint:     var(--stone-500);
+  --text-inverse:   var(--stone-900);
+  --text-link:      var(--orange-400);
+  --text-link-hover: var(--orange-300);
+
+  --border-subtle:  var(--stone-800);
+  --border-hover:   var(--stone-700);
+  --border-active:  var(--stone-600);
+
+  --ring-focus:     var(--stone-600);
+
+  --accent-primary-subtle:  var(--orange-900);
+  --accent-success-subtle:  var(--green-900);
+  --accent-error-subtle:    var(--red-900);
+  --accent-info-subtle:     var(--blue-900);
+
+  --shadow-elevated: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-dropdown: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  --overlay-backdrop: rgba(0, 0, 0, 0.6);
+
+  --scrollbar-thumb: var(--stone-600);
+  --scrollbar-thumb-hover: var(--stone-500);
+}

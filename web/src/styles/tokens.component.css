@@ -1,0 +1,88 @@
+/**
+ * Component Tokens — 组件级特例
+ *
+ * 只在必要时出现，解决"某个组件就是要和通用语义略有不同"的边缘情况。
+ * 禁止滥用：如果超过 3 个组件需要同一个特例，说明 Semantic Token 不够，
+ * 应该回溯到 Semantic 层新增一个 Token，而不是在 Component 层堆砌。
+ */
+
+:root {
+  /* ── Composer（输入框）─────────────────────────────────── */
+  --composer-bg:            var(--bg-surface);
+  --composer-border:         var(--border-subtle);
+  --composer-border-hover:   var(--border-hover);
+  --composer-border-focus:   var(--border-active);
+  --composer-shadow:         0 1px 3px rgba(0, 0, 0, 0.04);
+  --composer-shadow-focus:   0 0 0 1px var(--border-active), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --composer-placeholder:    var(--text-muted);
+  --composer-radius:         var(--radius-2xl);
+  --composer-padding-x:      var(--space-5);
+  --composer-padding-y:      var(--space-3);
+  --composer-min-height:     3.5rem;  /* 56px */
+  --composer-max-height:     12rem;   /* 192px */
+
+  /* ── Message（消息气泡）────────────────────────────────── */
+  --message-user-bg:         var(--stone-800);
+  --message-user-text:       var(--text-inverse);
+  --message-user-radius:     var(--radius-2xl);
+  --message-ai-bg:           transparent;
+  --message-ai-text:         var(--text-primary);
+  --message-padding:         var(--space-4);
+  --message-gap:             var(--space-4);
+
+  /* ── Code Block（代码块）───────────────────────────────── */
+  --code-bg:                 var(--stone-100);
+  --code-text:               var(--text-primary);
+  --code-border:             var(--border-subtle);
+  --code-radius:             var(--radius-lg);
+  --code-padding:            var(--space-4);
+  --code-font:               var(--font-mono);
+
+  /* ── Artifact Panel（右侧面板）─────────────────────────── */
+  --artifact-bg:             var(--bg-elevated);
+  --artifact-border:         var(--border-subtle);
+  --artifact-shadow:         var(--shadow-elevated);
+  --artifact-radius:         var(--radius-xl);
+  --artifact-width:          640px;
+  --artifact-header-height:  3.5rem;
+
+  /* ── Button（按钮原语）─────────────────────────────────── */
+  --button-ghost-hover:      var(--bg-hover);
+  --button-ghost-active:     var(--bg-active);
+  --button-icon-size:        2rem;  /* 32px */
+  --button-icon-radius:      var(--radius-md);
+
+  /* ── Input（基础输入框）────────────────────────────────── */
+  --input-bg:                var(--bg-surface);
+  --input-border:            var(--border-subtle);
+  --input-border-focus:      var(--border-active);
+  --input-radius:            var(--radius-xl);
+  --input-padding-x:         var(--space-4);
+  --input-padding-y:         var(--space-2-5);
+
+  /* ── Card（卡片）───────────────────────────────────────── */
+  --card-bg:                 var(--bg-surface);
+  --card-border:             var(--border-subtle);
+  --card-radius:             var(--radius-xl);
+  --card-padding:            var(--space-5);
+  --card-shadow:             none;
+
+  /* ── Tooltip（提示框）──────────────────────────────────── */
+  --tooltip-bg:              var(--stone-800);
+  --tooltip-text:            var(--text-inverse);
+  --tooltip-radius:          var(--radius-lg);
+  --tooltip-padding:         var(--space-2) var(--space-3);
+
+  /* ── Toast（通知）──────────────────────────────────────── */
+  --toast-bg:                var(--bg-elevated);
+  --toast-border:            var(--border-subtle);
+  --toast-radius:            var(--radius-xl);
+  --toast-shadow:            var(--shadow-dropdown);
+}
+
+.dark {
+  --code-bg:                 var(--stone-800);
+  --message-user-bg:         var(--stone-700);
+  --tooltip-bg:              var(--stone-100);
+  --tooltip-text:            var(--text-primary);
+}

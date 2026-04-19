@@ -1,0 +1,22 @@
+{
+  "project_code": "FUND",
+  "project_title": "Fund Screener",
+  "version": "0.1.0",
+  "mode": "interactive",
+  "granularity": "standard",
+  "parallelization": true,
+  "commit_docs": true,
+  "model_profile": "balanced",
+  "milestone_version": "v1.0",
+  "workflow": {
+    "research": false,
+    "plan_check": true,
+    "verifier": true,
+    "nyquist_validation": true,
+    "auto_advance": false,
+    "discuss_mode": "discuss"
+  },
+  "planning": {
+    "sub_repos": []
+  }
+}
