@@ -17,7 +17,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 | Phase | Name | Status |
 |-------|------|--------|
 | 0 | Claude 设计系统 | ✅ 初版已交付 — Token 三层体系 + 6 原子组件 + 3 Hook + framer-motion。等主人完成 design-audit 后对照微调 |
-| 1 | 后端 API 层 | ⏳ PENDING |
+| 1 | 后端 API 层 | 🚧 IN PROGRESS — FastAPI 框架已搭建，6 个 endpoint 全部注册，待 CLI 集成和端到端验证 |
 | 2 | 前端仪表盘 | ⏳ PENDING |
 | 3 | 回测引擎 | ⏳ PENDING |
 | 4 | 定时任务 | ⏳ PENDING |
