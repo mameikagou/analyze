@@ -14,7 +14,7 @@
 
 ### Validated
 
-- ✓ 多市场数据抓取（A股公募基金 via tushare/akshare，美股 ETF via yfinance，港股 ETF） — 现有
+- ✓ 多市场数据抓取（A股双数据源：akshare primary + tushare 补充净值；美股 yfinance；港股） — 现有
 - ✓ MA 均线趋势筛选（MA20 > MA60 右侧判定） — 现有
 - ✓ SQLite 数据湖（6 张表，Schema v3，自动迁移） — 现有
 - ✓ 量化打分引擎（三因子 Z-Score 标准化 + 加权排名） — 现有
@@ -57,7 +57,7 @@
 - 技术栈：Python 3.11+ (uv) + TypeScript/React 19 (bun)
 - 数据存储：SQLite（数据湖）+ JSON 文件缓存
 - 前端图表：TradingView Lightweight Charts
-- 数据源：tushare Pro (A股) / akshare (A股备选) / yfinance (美股)
+- 数据源：A股双数据源（akshare primary + tushare 补充净值历史），美股 yfinance，港股
 - 现有代码质量：Pydantic 数据模型、完整类型注解、76 个单元测试覆盖核心逻辑
 - 已知问题：旧数据 adj_nav 为 NULL（v2 迁移引入的新列），需要回填
 
@@ -65,7 +65,7 @@
 
 ### 后端
 - **Tech stack**: Python 3.11 + uv 锁定，不动底层框架
-- **Data sources**: 免费/低成本 API 为主，tushare Pro 有限额
+- **Data sources**: A股双数据源（akshare + tushare 按方法路由），免费/低成本 API，tushare Pro 有限额
 - **Timeline**: 个人项目，按可用时间推进
 - **Dependencies**: akshare 列名可能随版本变动，需防御式解析
 
@@ -88,7 +88,7 @@
 |----------|-----------|---------|
 | SQLite 作为数据湖 | 单机项目，不需要分布式数据库 | ✓ Good |
 | 默认只标注申购限额不过滤 | 避免漏掉优质限购基金 | ✓ Good |
-| tushare Pro 替代 akshare 为主数据源 | 更稳定的 A 股数据 | ✓ Good |
+| A股双数据源架构：akshare primary + tushare 补充净值历史 | akshare 字段丰富（申购限额、持仓），tushare SLA 稳定（净值历史） | ✓ Good |
 | CompositeCNFetcher 按方法路由 | 兼顾 tushare 稳定性和 akshare 覆盖度 | — Pending |
 | TV Charts 作为前端图表库 | 专业金融图表，轻量且免费 | — Pending |
 
