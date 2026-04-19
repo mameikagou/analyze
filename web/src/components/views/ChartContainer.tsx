@@ -46,10 +46,17 @@ function calcMA(data: ChartPoint[], period: number): LineData<Time>[] {
   const result: LineData<Time>[] = []
   for (let i = period - 1; i < data.length; i++) {
     let sum = 0
+    let validCount = 0
     for (let j = 0; j < period; j++) {
-      sum += data[i - j].value
+      const v = data[i - j].value
+      if (v != null) {
+        sum += v
+        validCount++
+      }
     }
-    result.push({ time: data[i].time, value: sum / period })
+    if (validCount > 0) {
+      result.push({ time: data[i].time, value: sum / validCount })
+    }
   }
   return result
 }

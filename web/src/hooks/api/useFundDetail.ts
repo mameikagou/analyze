@@ -6,12 +6,12 @@ import { apiGet } from '@/api/client'
 export interface Holding {
   stockCode: string
   stockName: string
-  weightPct: number
+  weightPct: number | null
 }
 
 export interface LatestNav {
   date: string
-  nav: number
+  nav: number | null
   adjNav: number | null
 }
 

@@ -26,8 +26,12 @@ export function HoldingsList({ holdings }: HoldingsListProps) {
     )
   }
 
-  // 按权重降序排列
-  const sorted = [...holdings].sort((a, b) => b.weightPct - a.weightPct)
+  // 按权重降序排列（null 权重放最后）
+  const sorted = [...holdings].sort((a, b) => {
+    const wa = a.weightPct ?? 0
+    const wb = b.weightPct ?? 0
+    return wb - wa
+  })
   const maxWeight = sorted[0]?.weightPct ?? 1
 
   return (
@@ -64,7 +68,7 @@ export function HoldingsList({ holdings }: HoldingsListProps) {
                 </span>
               </div>
               <span className="text-sm font-mono font-medium tabular-nums text-[var(--text-secondary)] shrink-0 ml-2">
-                {holding.weightPct.toFixed(2)}%
+                {holding.weightPct?.toFixed(2) ?? '—'}%
               </span>
             </div>
 
@@ -73,7 +77,7 @@ export function HoldingsList({ holdings }: HoldingsListProps) {
               <motion.div
                 className="h-full rounded-full bg-[var(--accent-primary)]"
                 initial={{ width: 0 }}
-                animate={{ width: `${(holding.weightPct / maxWeight) * 100}%` }}
+                animate={{ width: `${((holding.weightPct ?? 0) / maxWeight) * 100}%` }}
                 transition={{ duration: 0.5, ease: [0, 0, 0.2, 1] }}
               />
             </div>

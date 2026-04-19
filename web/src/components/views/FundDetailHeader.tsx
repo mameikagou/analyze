@@ -88,17 +88,17 @@ export function FundDetailHeader({ fund, score }: FundDetailHeaderProps) {
           <div>
             <span className="text-xs text-[var(--text-muted)]">最新净值</span>
             <div className="text-lg font-bold tabular-nums text-[var(--text-primary)]">
-              {fund.latestNav.nav.toFixed(4)}
+              {fund.latestNav.nav?.toFixed(4) ?? '—'}
             </div>
           </div>
           <div className="w-px h-8 bg-[var(--border-subtle)]" />
           <div>
             <span className="text-xs text-[var(--text-muted)]">日期</span>
             <div className="text-sm font-medium tabular-nums text-[var(--text-secondary)]">
-              {fund.latestNav.date}
+              {fund.latestNav.date ?? '—'}
             </div>
           </div>
-          {fund.latestNav.adjNav !== null && (
+          {fund.latestNav.adjNav !== null && fund.latestNav.adjNav !== undefined && (
             <>
               <div className="w-px h-8 bg-[var(--border-subtle)]" />
               <div>

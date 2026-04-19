@@ -257,7 +257,10 @@ class DataStore:
         - version 2（已是最新）：什么都不做
         """
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(str(self._db_path))
+        # check_same_thread=False: FastAPI 同步依赖在线程池执行，
+        # 但连接对象传给 async 路由（事件循环线程），跨线程触发检查。
+        # 安全前提：每个请求独立连接（get_db yield 模式），不存在并发竞争。
+        self._conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA synchronous=NORMAL")
 

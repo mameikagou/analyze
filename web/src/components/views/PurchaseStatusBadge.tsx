@@ -42,7 +42,7 @@ function formatStatus(raw: string | null, limitAmount: number | null): string {
 
   const variant = mapStatus(raw)
 
-  if (variant === 'limit' && limitAmount !== null && limitAmount > 0) {
+  if (variant === 'limit' && limitAmount !== null && limitAmount !== undefined && limitAmount > 0) {
     if (limitAmount >= 10000) {
       return `限购 ${(limitAmount / 10000).toFixed(0)}万`
     }

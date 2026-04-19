@@ -7,10 +7,10 @@ export interface ScreeningResultItem {
   code: string
   name: string
   market: string
-  nav: number
-  maShort: number
-  maLong: number
-  maDiffPct: number
+  nav: number | null
+  maShort: number | null
+  maLong: number | null
+  maDiffPct: number | null
   dailyChangePct: number | null
   score: number | null
   purchaseStatus: string | null

@@ -46,17 +46,19 @@ export function ScreeningResultItem({ item, onClick }: ScreeningResultItemProps)
         </div>
 
         <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
-          <span>净值: {item.nav.toFixed(4)}</span>
-          <span>MA20: {item.maShort.toFixed(4)}</span>
-          <span>MA60: {item.maLong.toFixed(4)}</span>
+          <span>净值: {item.nav?.toFixed(4) ?? '—'}</span>
+          <span>MA20: {item.maShort?.toFixed(4) ?? '—'}</span>
+          <span>MA60: {item.maLong?.toFixed(4) ?? '—'}</span>
         </div>
       </div>
 
       {/* 右侧：指标徽章 */}
       <div className="flex items-center gap-3 shrink-0">
-        <MADiffIndicator maDiffPct={item.maDiffPct} />
+        {item.maDiffPct !== null && item.maDiffPct !== undefined && (
+          <MADiffIndicator maDiffPct={item.maDiffPct} />
+        )}
 
-        {item.dailyChangePct !== null && (
+        {item.dailyChangePct !== null && item.dailyChangePct !== undefined && (
           <span
             className={`text-xs font-mono tabular-nums ${
               item.dailyChangePct >= 0

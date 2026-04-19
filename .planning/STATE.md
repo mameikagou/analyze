@@ -64,6 +64,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [ ] Phase 4：定时任务自动化（cron/schedule）
 - [ ] Phase 4：报告自动生成 + 任务日志监控
 
+## Issues Log
+
+| Date | Issue | Root Cause | Fix |
+|------|-------|------------|-----|
+| 2026-04-19 | SQLite `ProgrammingError: SQLite objects created in a thread can only be used in that same thread` | FastAPI 同步依赖 `get_db` 在线程池执行 → 创建连接；async 路由在事件循环线程执行 → 使用连接；SQLite 默认 `check_same_thread=True` 触发跨线程检查 | (1) `storage.py` `_init_db`: `sqlite3.connect(..., check_same_thread=False)`；(2) `deps.py` `get_db`: `return` → `yield` + `store.close()` 确保请求级连接释放 |
+
 ## Notes
 
 - 现有前端在 `web/` 目录，技术栈 Vite + React 19 + Tailwind v4 + shadcn/ui + TanStack Router
