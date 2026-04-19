@@ -6,6 +6,7 @@
 @import "./styles/tokens.primitive.css";
 @import "./styles/tokens.semantic.css";
 @import "./styles/tokens.component.css";
+@import "./styles/tokens.chart.css";
 
 @custom-variant dark (&:is(.dark *));
 
