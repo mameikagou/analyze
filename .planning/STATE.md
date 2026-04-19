@@ -52,9 +52,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 
 ### Phase 2（进行中 🚧）— 按 5 个 branch 拆分
 - [x] **Branch 1** `feat/api-hooks`：5 个 API hooks（useFunds/useFundDetail/useScreening/useChartData/useStats）+ barrel export — ✅ COMPLETE (commit a06da8a)
-- [ ] **Branch 2** `feat/animation-tokens`：animation.tokens.ts + chart tokens CSS + CVA variants — ⏳ NEXT
-- [ ] **Branch 3** `feat/ui-components`：10 个业务组件（StatsCard/FundTable/FundDetailHeader/HoldingsList/ChartContainer/ScreeningResultItem/MarketBadge/ScoreBadge/PurchaseStatusBadge/MADiffIndicator）
-- [ ] **Branch 4** `feat/fund-detail-page`：新建 `/funds/$code` 动态路由 + 详情页布局
+- [x] **Branch 2** `feat/animation-tokens`：animation.tokens.ts + chart tokens CSS + CVA variants — ✅ COMPLETE (已合入 main)
+- [x] **Branch 3** `feat/ui-components`：10 个业务组件 + barrel export — ✅ COMPLETE (commit f4e8b7d)
+- [ ] **Branch 4** `feat/fund-detail-page`：新建 `/funds/$code` 动态路由 + 详情页布局 — ⏳ NEXT
 - [ ] **Branch 5** `feat/pages-migrate`：4 个页面迁移（Dashboard/FundList/Screening/Chat），mock → 真数据
 
 ### 待开工（后端后续 Phase）
