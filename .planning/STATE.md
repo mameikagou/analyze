@@ -10,15 +10,15 @@
 See: `.planning/PROJECT.md` (updated 2026-04-19)
 
 **Core value:** 用户能在 1 分钟内获取全市场符合趋势条件的基金/ETF 列表
-**Current focus:** Phase 1 后端 API 层（FastAPI）— 前端设计系统初版已交付，设计考古异步进行中
+**Current focus:** Phase 2 前端仪表盘 — 后端 API 对接 + 组件样式自包含架构
 
 ## Phase Status
 
 | Phase | Name | Status |
 |-------|------|--------|
 | 0 | Claude 设计系统 | ✅ 初版已交付 — Token 三层体系 + 6 原子组件 + 3 Hook + framer-motion。等主人完成 design-audit 后对照微调 |
-| 1 | 后端 API 层 | 🚧 IN PROGRESS — FastAPI 框架已搭建，6 个 endpoint 全部注册，待 CLI 集成和端到端验证 |
-| 2 | 前端仪表盘 | ⏳ PENDING |
+| 1 | 后端 API 层 | ✅ COMPLETE — 6 个 endpoint 全部注册并通过验证，CORS 已配置，可直接对接前端 |
+| 2 | 前端仪表盘 | 🚧 IN PROGRESS — API 对接开始，按 5 个 branch 拆分：api-hooks → animation-tokens → ui-components → fund-detail-page → pages-migrate |
 | 3 | 回测引擎 | ⏳ PENDING |
 | 4 | 定时任务 | ⏳ PENDING |
 | 5 | 回测展示 | ⏳ PENDING |
@@ -30,6 +30,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 | 2026-04-19 | 项目从 fund-screener 扩展为 "Claude 风格前端 + 后端 API + 回测 + 自动化" | 主人要求复刻 claude.ai/new 样式 |
 | 2026-04-19 | 前端设计系统（Phase 0）作为独立 Phase，阻塞前端页面开发，但后端可并行 | 设计考古由主人异步完成 |
 | 2026-04-19 | 工作流模式：Interactive（每步确认） | 主人选择 |
+| 2026-04-19 | Phase 1 完成，Phase 2 提前启动 — 不等设计考古 | 主人要求先做能用的前端，样式后续微调 |
+| 2026-04-19 | 前端关注点分离架构：功能与样式严格解耦 | 组件粒度样式自包含，页面零样式 |
+| 2026-04-19 | Phase 2 拆分为 5 个独立 branch | 主人要求逐个 review/merge |
 
 ## Blockers
 
@@ -46,6 +49,13 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [x] Phase 1：搭建 FastAPI 后端，暴露 REST API — `/health`, `/api/funds`, `/api/funds/{code}`, `/api/screening`, `/api/chart/{code}`, `/api/stats`
 - [x] Phase 1：对接 SQLite 数据湖，直接复用 storage.py 查询逻辑
 
+### Phase 2（进行中 🚧）— 按 5 个 branch 拆分
+- [ ] **Branch 1** `feat/api-hooks`：5 个 API hooks（useFunds/useFundDetail/useScreening/useChartData/useStats）+ barrel export
+- [ ] **Branch 2** `feat/animation-tokens`：animation.tokens.ts + chart tokens CSS + CVA variants
+- [ ] **Branch 3** `feat/ui-components`：10 个业务组件（StatsCard/FundTable/FundDetailHeader/HoldingsList/ChartContainer/ScreeningResultItem/MarketBadge/ScoreBadge/PurchaseStatusBadge/MADiffIndicator）
+- [ ] **Branch 4** `feat/fund-detail-page`：新建 `/funds/$code` 动态路由 + 详情页布局
+- [ ] **Branch 5** `feat/pages-migrate`：4 个页面迁移（Dashboard/FundList/Screening/Chat），mock → 真数据
+
 ### 待开工（后端后续 Phase）
 - [ ] Phase 3：adj_nav 历史回填脚本
 - [ ] Phase 3：回测引擎框架
@@ -57,5 +67,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 
 - 现有前端在 `web/` 目录，技术栈 Vite + React 19 + Tailwind v4 + shadcn/ui + TanStack Router
 - 现有后端在 `src/fund_screener/`，技术栈 Python 3.11 + uv + SQLite + tushare/akshare/yfinance
-- 当前前端所有数据为 mock，需要 Phase 1 API 层才能接真数据
 - 前端现有路由：/（仪表盘）, /funds（基金列表）, /screening（筛选结果）, /chat（AI 分析）
+- Phase 2 分支拆分（主人逐个 review/merge）：
+  - Branch 1 `feat/api-hooks`：5 个 API hooks
+  - Branch 2 `feat/animation-tokens`：动画 + 图表 Token
+  - Branch 3 `feat/ui-components`：10 个业务组件
+  - Branch 4 `feat/fund-detail-page`：/funds/$code 详情页
+  - Branch 5 `feat/pages-migrate`：4 页面 mock → 真数据
+- 关注点分离：页面零样式，组件样式自包含，Token 集中管理

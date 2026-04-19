@@ -26,20 +26,30 @@
 - ✓ 前端骨架（Vite + React 19 + shadcn/ui + TanStack Router + TV Charts） — 现有
 - ✓ CompositeCNFetcher 多数据源中间层（按方法路由到 tushare/akshare） — 现有
 - ✓ 76 个单元测试全部通过 — 现有
+- ✓ 后端 REST API 层（FastAPI，6 个 endpoint）— Phase 1
+- ✓ 前端设计系统初版（Token 三层 + 原子组件 + 交互 Hook）— Phase 0 初版
 
 ### Active
 
-#### 前端设计系统（Phase 0 — 阻塞项，等主人设计考古）
+#### 前端设计系统（Phase 0 — 初版已交付，等主人设计考古后微调）
 
-- [ ] Token 三层体系（Primitive → Semantic → Component），CSS 变量驱动，Tailwind 配置零硬编码
-- [ ] 核心原子组件（Surface, Prose, AutoTextarea, CenteredComposer/DockedComposer, IconButton, TextButton）
-- [ ] 交互 Hook（useComposerState, useArtifactPanel, useStreamingMessage）
+- [x] Token 三层体系（Primitive → Semantic → Component），CSS 变量驱动，Tailwind 配置零硬编码
+- [x] 核心原子组件（Surface, Prose, AutoTextarea, CenteredComposer/DockedComposer, IconButton, TextButton）
+- [x] 交互 Hook（useComposerState, useArtifactPanel, useStreamingMessage）
 - [ ] Skill 编写（.claude/skills/claude-ui-system/，含查表规则 + 反例 + checklist）
 - [ ] 工程护栏（ESLint 禁止裸 HEX、Stylelint 强制 var(--xxx)）
 
-#### 后端功能
+#### Phase 2: 前端仪表盘（进行中 🚧）
 
-- [ ] 前端可视化仪表盘 — 绑定后端数据到 React + TV Charts，实现趋势图表、筛选结果展示、基金详情页
+- [ ] 后端 API 对接 — 5 个 hooks（useFunds/useFundDetail/useScreening/useChartData/useStats）
+- [ ] 动画 Token 集中管理（animation.tokens.ts）+ 图表语义 Token
+- [ ] 业务组件层（10 个视图组件，样式自包含）
+- [ ] 基金详情页（/funds/$code）
+- [ ] 4 个页面迁移（Dashboard / FundList / Screening / Chat），mock → 真数据
+- [ ] 关注点分离验证 — 页面零样式、组件样式自包含
+
+#### 后端功能（Phase 3+）
+
 - [ ] adj_nav 历史回填 — 补齐 Schema v2 迁移后旧数据的 adj_nav 空值，为回测做准备
 - [ ] 回测模块 — 基于历史数据验证 MA 筛选策略的有效性，输出胜率、夏普比率等指标
 - [ ] 定时任务自动化 — cron/schedule 每日自动跑筛选，生成报告并推送
@@ -89,8 +99,9 @@
 | SQLite 作为数据湖 | 单机项目，不需要分布式数据库 | ✓ Good |
 | 默认只标注申购限额不过滤 | 避免漏掉优质限购基金 | ✓ Good |
 | A股双数据源架构：akshare primary + tushare 补充净值历史 | akshare 字段丰富（申购限额、持仓），tushare SLA 稳定（净值历史） | ✓ Good |
-| CompositeCNFetcher 按方法路由 | 兼顾 tushare 稳定性和 akshare 覆盖度 | — Pending |
+| CompositeCNFetcher 按方法路由 | 兼顾 tushare 稳定性和 akshare 覆盖度 | ✓ Good |
 | TV Charts 作为前端图表库 | 专业金融图表，轻量且免费 | — Pending |
+| 前端关注点分离架构（组件粒度样式自包含） | 样式与逻辑解耦，页面零样式，后续设计考古只改组件 | — Pending |
 
 ## Evolution
 
@@ -110,4 +121,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-19 after initialization*
+*Last updated: 2026-04-19 after Phase 1 complete + Phase 2 kickoff*

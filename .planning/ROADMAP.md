@@ -172,9 +172,9 @@ Phase 1 (后端 API) ───┬──► Phase 2 (前端仪表盘) ──┘
 
 | Phase | Status | Plans | Summaries | UAT |
 |-------|--------|-------|-----------|-----|
-| 0 | 🕐 WAITING | 0 | 0 | — |
-| 1 | ⏳ PENDING | 0 | 0 | — |
-| 2 | ⏳ PENDING | 0 | 0 | — |
+| 0 | ✅ DELIVERED | 1 | 1 | — |
+| 1 | ✅ COMPLETE | 1 | 1 | — |
+| 2 | 🚧 IN PROGRESS | 0 | 0 | — |
 | 3 | ⏳ PENDING | 0 | 0 | — |
 | 4 | ⏳ PENDING | 0 | 0 | — |
 | 5 | ⏳ PENDING | 0 | 0 | — |
