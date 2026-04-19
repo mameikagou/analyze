@@ -42,9 +42,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 ### 等主人（设计考古）
 - [ ] 主人：用 DevTools 扒 claude.ai/new 样式，填写 `docs/design-audit-result.md`
 
-### 后端（不依赖前端设计系统，现在就能开工）
-- [ ] Phase 1：搭建 FastAPI 后端，暴露 REST API
-- [ ] Phase 1：对接 SQLite 数据湖，实现数据查询接口
+### Phase 1（已完成 ✅）
+- [x] Phase 1：搭建 FastAPI 后端，暴露 REST API — `/health`, `/api/funds`, `/api/funds/{code}`, `/api/screening`, `/api/chart/{code}`, `/api/stats`
+- [x] Phase 1：对接 SQLite 数据湖，直接复用 storage.py 查询逻辑
+
+### 待开工（后端后续 Phase）
 - [ ] Phase 3：adj_nav 历史回填脚本
 - [ ] Phase 3：回测引擎框架
 - [ ] Phase 3：MA 策略回测（胜率、夏普比率）
