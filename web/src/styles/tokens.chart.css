@@ -1,0 +1,58 @@
+/**
+ * Chart Tokens — 图表语义 Token
+ *
+ * 供 TradingView Lightweight Charts 使用。
+ *
+ * Market-aware 涨跌色：
+ *   - 默认（美股/港股）：绿涨红跌
+ *   - A股：父容器加 data-market="cn" 后切换为红涨绿跌
+ *
+ * 均线颜色遵循金融行业标准：
+ *   - 短期均线（MA5/MA20）：暖色（橙）
+ *   - 中期均线（MA60）：冷色（蓝）
+ *   - 长期均线（MA120/MA200）：中性灰
+ *
+ * 禁止在图表组件中硬编码 HEX。所有颜色从此文件查表。
+ */
+
+:root {
+  /* ── 默认市场（美股/港股：绿涨红跌）──────────────────── */
+  --chart-up:        var(--green-500);
+  --chart-down:      var(--red-500);
+
+  /* ── 均线颜色 ───────────────────────────────────────── */
+  --chart-ma-short:  var(--orange-500);  /* MA5 / MA20 */
+  --chart-ma-medium: var(--blue-500);    /* MA60 */
+  --chart-ma-long:   var(--stone-500);   /* MA120 / MA200 */
+
+  /* ── 图表容器 ───────────────────────────────────────── */
+  --chart-bg:        transparent;
+  --chart-text:      var(--text-secondary);
+  --chart-text-price: var(--text-primary);
+
+  /* ── 网格线 ─────────────────────────────────────────── */
+  --chart-grid:      var(--border-subtle);
+
+  /* ── 十字光标 ───────────────────────────────────────── */
+  --chart-crosshair: var(--text-muted);
+
+  /* ── 成交量 ─────────────────────────────────────────── */
+  --chart-volume-up:   var(--green-500);
+  --chart-volume-down: var(--red-500);
+}
+
+/* ── A股/中国市场：红涨绿跌 ───────────────────────────── */
+[data-market="cn"] {
+  --chart-up:          var(--red-500);
+  --chart-down:        var(--green-500);
+  --chart-volume-up:   var(--red-500);
+  --chart-volume-down: var(--green-500);
+}
+
+/* ── Dark Mode ───────────────────────────────────────── */
+.dark {
+  --chart-text:       var(--text-secondary);
+  --chart-text-price: var(--text-primary);
+  --chart-grid:       var(--border-subtle);
+  --chart-crosshair:  var(--text-muted);
+}

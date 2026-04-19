@@ -33,6 +33,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 | 2026-04-19 | Phase 1 完成，Phase 2 提前启动 — 不等设计考古 | 主人要求先做能用的前端，样式后续微调 |
 | 2026-04-19 | 前端关注点分离架构：功能与样式严格解耦 | 组件粒度样式自包含，页面零样式 |
 | 2026-04-19 | Phase 2 拆分为 5 个独立 branch | 主人要求逐个 review/merge |
+| 2026-04-19 | API hooks 层统一做 snake_case → camelCase 映射 | 后端保持 Pythonic，前端用 camelCase，边界在 hook 层 |
 
 ## Blockers
 
@@ -50,8 +51,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [x] Phase 1：对接 SQLite 数据湖，直接复用 storage.py 查询逻辑
 
 ### Phase 2（进行中 🚧）— 按 5 个 branch 拆分
-- [ ] **Branch 1** `feat/api-hooks`：5 个 API hooks（useFunds/useFundDetail/useScreening/useChartData/useStats）+ barrel export
-- [ ] **Branch 2** `feat/animation-tokens`：animation.tokens.ts + chart tokens CSS + CVA variants
+- [x] **Branch 1** `feat/api-hooks`：5 个 API hooks（useFunds/useFundDetail/useScreening/useChartData/useStats）+ barrel export — ✅ COMPLETE (commit a06da8a)
+- [ ] **Branch 2** `feat/animation-tokens`：animation.tokens.ts + chart tokens CSS + CVA variants — ⏳ NEXT
 - [ ] **Branch 3** `feat/ui-components`：10 个业务组件（StatsCard/FundTable/FundDetailHeader/HoldingsList/ChartContainer/ScreeningResultItem/MarketBadge/ScoreBadge/PurchaseStatusBadge/MADiffIndicator）
 - [ ] **Branch 4** `feat/fund-detail-page`：新建 `/funds/$code` 动态路由 + 详情页布局
 - [ ] **Branch 5** `feat/pages-migrate`：4 个页面迁移（Dashboard/FundList/Screening/Chat），mock → 真数据

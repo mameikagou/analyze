@@ -33,6 +33,9 @@ interface LightweightChartProps {
 /**
  * TradingView Lightweight Charts 封装组件
  *
+ * 样式全部从 CSS 变量读取（tokens.chart.css），禁止硬编码 HEX。
+ * Market-aware 涨跌色通过父容器的 data-market="cn" 自动切换。
+ *
  * 注意：组件卸载时必须调用 chart.remove() 释放 canvas 和事件监听器，
  * 否则会造成内存泄漏（TV 图表在 DOM 之外保留了大量状态）。
  */
@@ -50,6 +53,13 @@ export function LightweightChart({
     const container = containerRef.current
     if (!container) return
 
+    /* 从计算样式读取 CSS 变量 — 自动响应 data-market 和 .dark */
+    const style = getComputedStyle(container)
+    const chartUp = style.getPropertyValue('--chart-up').trim() || '#22c55e'
+    const chartDown = style.getPropertyValue('--chart-down').trim() || '#ef4444'
+    const chartGrid = style.getPropertyValue('--chart-grid').trim() || '#e7e5e4'
+    const chartCrosshair = style.getPropertyValue('--chart-crosshair').trim() || '#78716c'
+
     const chart = createChart(container, {
       height,
       layout: {
@@ -57,17 +67,25 @@ export function LightweightChart({
         textColor: 'currentColor',
       },
       grid: {
-        vertLines: { color: 'hsl(var(--border) / 0.3)' },
-        horzLines: { color: 'hsl(var(--border) / 0.3)' },
+        vertLines: { color: chartGrid + '4d' }, /* 30% opacity = 0x4d */
+        horzLines: { color: chartGrid + '4d' },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
+        vertLine: {
+          color: chartCrosshair,
+          labelBackgroundColor: chartCrosshair,
+        },
+        horzLine: {
+          color: chartCrosshair,
+          labelBackgroundColor: chartCrosshair,
+        },
       },
       rightPriceScale: {
-        borderColor: 'hsl(var(--border))',
+        borderColor: chartGrid,
       },
       timeScale: {
-        borderColor: 'hsl(var(--border))',
+        borderColor: chartGrid,
         timeVisible: false,
       },
     })
@@ -76,12 +94,12 @@ export function LightweightChart({
 
     if (type === 'candlestick') {
       const candleSeries = chart.addSeries(CandlestickSeries, {
-        upColor: '#22c55e',
-        downColor: '#ef4444',
-        borderUpColor: '#22c55e',
-        borderDownColor: '#ef4444',
-        wickUpColor: '#22c55e',
-        wickDownColor: '#ef4444',
+        upColor: chartUp,
+        downColor: chartDown,
+        borderUpColor: chartUp,
+        borderDownColor: chartDown,
+        wickUpColor: chartUp,
+        wickDownColor: chartDown,
       })
       const cd = data.map(
         (d): CandlestickData<Time> => ({
@@ -96,7 +114,7 @@ export function LightweightChart({
       seriesRef.current = candleSeries
     } else {
       const lineSeries = chart.addSeries(LineSeries, {
-        color: 'hsl(var(--primary))',
+        color: style.getPropertyValue('--chart-ma-short').trim() || '#f97316',
         lineWidth: 2,
         lineStyle: LineStyle.Solid,
       })
