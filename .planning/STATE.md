@@ -10,7 +10,7 @@
 See: `.planning/PROJECT.md` (updated 2026-04-19)
 
 **Core value:** 用户能在 1 分钟内获取全市场符合趋势条件的基金/ETF 列表
-**Current focus:** Phase 2 前端仪表盘 — 后端 API 对接 + 组件样式自包含架构
+**Current focus:** Phase 3 回测引擎 — adj_nav 历史回填 + MA 策略回测框架
 
 ## Phase Status
 
@@ -18,7 +18,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 |-------|------|--------|
 | 0 | Claude 设计系统 | ✅ 初版已交付 — Token 三层体系 + 6 原子组件 + 3 Hook + framer-motion。等主人完成 design-audit 后对照微调 |
 | 1 | 后端 API 层 | ✅ COMPLETE — 6 个 endpoint 全部注册并通过验证，CORS 已配置，可直接对接前端 |
-| 2 | 前端仪表盘 | 🚧 IN PROGRESS — API 对接开始，按 5 个 branch 拆分：api-hooks → animation-tokens → ui-components → fund-detail-page → pages-migrate |
+| 2 | 前端仪表盘 | ✅ COMPLETE — 5 个 branch 全部完成，所有页面已对接真实 API |
 | 3 | 回测引擎 | ⏳ PENDING |
 | 4 | 定时任务 | ⏳ PENDING |
 | 5 | 回测展示 | ⏳ PENDING |
@@ -54,8 +54,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [x] **Branch 1** `feat/api-hooks`：5 个 API hooks（useFunds/useFundDetail/useScreening/useChartData/useStats）+ barrel export — ✅ COMPLETE (commit a06da8a)
 - [x] **Branch 2** `feat/animation-tokens`：animation.tokens.ts + chart tokens CSS + CVA variants — ✅ COMPLETE (已合入 main)
 - [x] **Branch 3** `feat/ui-components`：10 个业务组件 + barrel export — ✅ COMPLETE (commit f4e8b7d)
-- [ ] **Branch 4** `feat/fund-detail-page`：新建 `/funds/$code` 动态路由 + 详情页布局 — ⏳ NEXT
-- [ ] **Branch 5** `feat/pages-migrate`：4 个页面迁移（Dashboard/FundList/Screening/Chat），mock → 真数据
+- [x] **Branch 4** `feat/fund-detail-page`：新建 `/funds/$code` 动态路由 + 详情页布局 — ✅ COMPLETE
+- [x] **Branch 5** `feat/pages-migrate`：4 个页面迁移（Dashboard/FundList/Screening/Chat），mock → 真数据 — ✅ COMPLETE
 
 ### 待开工（后端后续 Phase）
 - [ ] Phase 3：adj_nav 历史回填脚本
