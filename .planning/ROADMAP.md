@@ -25,12 +25,7 @@
 
 **Requirements mapped:** FRONT-01 ~ FRONT-06（视觉基础层）
 
-**UI hint:** yes — 前端设计系统，强 UI 相关
-
-**Notes:**
-- 此 Phase 在设计上**阻塞所有前端页面开发**，但后端工作（Phase 2~4）可并行推进
-- 主人可以慢慢做设计考古，我先推进后端 Phase
-- 考古完成后，此 Phase 进入 discuss → plan → execute 流程
+**UI hint:** yes — 强 UI，必须用 Phase 0 的 Token/组件
 
 ---
 
@@ -95,6 +90,12 @@
 **Requirements mapped:** DATA-01 ~ DATA-03, BACK-01 ~ BACK-04
 
 **UI hint:** no — 纯后端，回测结果未来可在前端 Phase 展示
+
+**Plans:**
+- [ ] `03-01-PLAN.md` — 因子层 (factors/base.py + technical.py + quant.py + composite.py) + storage.load_nav_panel() + 单元测试
+- [ ] `03-02-PLAN.md` — 回测引擎核心 (backtest/config.py + engine.py + result.py) + vectorbt 集成 + 单元测试
+- [ ] `03-03-PLAN.md` — API 层 (api/routes/backtest.py) + CLI 子命令 (cli.py backtest) + adj_nav 回填脚本 (scripts/backfill_adj_nav.py)
+- [ ] `03-04-PLAN.md` — 前端回测页 (web/src/routes/backtest/index.tsx + useBacktest hook + 导航更新)
 
 ---
 
@@ -175,9 +176,9 @@ Phase 1 (后端 API) ───┬──► Phase 2 (前端仪表盘) ──┘
 | 0 | ✅ DELIVERED | 1 | 1 | — |
 | 1 | ✅ COMPLETE | 1 | 1 | — |
 | 2 | 🚧 IN PROGRESS | 0 | 0 | — |
-| 3 | ⏳ PENDING | 0 | 0 | — |
+| 3 | 📐 PLANNED | 4 | 0 | — |
 | 4 | ⏳ PENDING | 0 | 0 | — |
 | 5 | ⏳ PENDING | 0 | 0 | — |
 
 ---
-*Last updated: 2026-04-19 after initialization*
+*Last updated: 2026-04-20 after Phase 3 planning*
