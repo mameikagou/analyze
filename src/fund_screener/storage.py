@@ -247,6 +247,29 @@ class DataStore:
         self._conn: sqlite3.Connection | None = None
         self._init_db()
 
+    @classmethod
+    def from_connection(cls, conn: sqlite3.Connection) -> "DataStore":
+        """Create DataStore wrapper around an existing connection.
+
+        设计意图：
+        FastAPI 的依赖注入已经创建了 sqlite3.Connection（通过 get_db_conn），
+        路由需要调用 DataStore.load_nav_panel() 等方法。如果新建 DataStore 实例，
+        会再创建一个新连接，造成连接泄漏和性能损耗。
+
+        本工厂方法把已有连接包装成 DataStore，所有查询方法都能正常工作，
+        但持久化方法（persist_*）也能用（因为它们只依赖 self._conn）。
+
+        注意：
+        - 不调用 _init_db()，因为连接已存在，schema 已由原 DataStore 初始化
+        - _db_path 设为 :memory: 标记（仅用于日志/调试，不影响查询）
+        - 调用方负责连接的生命周期（关闭）
+        """
+        instance = cls.__new__(cls)
+        instance._conn = conn
+        instance._db_path = Path(":memory:")
+        instance._fund_id_cache = {}
+        return instance
+
     def _init_db(self) -> None:
         """
         初始化数据库连接 + 建表 + 设置 PRAGMA。

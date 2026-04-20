@@ -15,7 +15,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from fund_screener.api.routes import funds, screening, chart, stats, health
+from fund_screener.api.routes import backtest, funds, screening, chart, stats, health
 
 logger = logging.getLogger("fund_screener.api")
 
@@ -40,3 +40,4 @@ app.include_router(funds.router, prefix="/api", tags=["Funds"])
 app.include_router(screening.router, prefix="/api", tags=["Screening"])
 app.include_router(chart.router, prefix="/api", tags=["Chart"])
 app.include_router(stats.router, prefix="/api", tags=["Stats"])
+app.include_router(backtest.router, prefix="/api", tags=["Backtest"])
