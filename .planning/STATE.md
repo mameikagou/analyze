@@ -3,14 +3,14 @@
 **Current milestone:** v1.0
 **Status:** initialized
 **Started:** 2026-04-19
-**Stopped at:** 2026-04-19 — Phase 2 全部完成，待主人决定 Phase 3 启动时机
+**Stopped at:** 2026-04-20 — Phase 3 Wave 2 完成，待主人决定 Wave 3/4 启动时机
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-19)
 
 **Core value:** 用户能在 1 分钟内获取全市场符合趋势条件的基金/ETF 列表
-**Current focus:** Phase 3 回测引擎 — adj_nav 历史回填 + MA 策略回测框架
+**Current focus:** Phase 3 回测引擎 — Wave 3 API 层 + adj_nav 回填 / Wave 4 前端回测页
 
 ## Phase Status
 
@@ -73,12 +73,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [x] `storage.py` — 新增 `load_nav_panel()` 宽表加载方法
 - [x] 单元测试 — 30 个 test cases, 全部通过
 
-**Plan 03-02（Wave 2）：回测引擎核心** — requirements: BACK-01~04
-- [ ] `backtest/config.py` — BacktestConfig（frozen dataclass）
-- [ ] `backtest/engine.py` — BacktestEngine（vectorbt v1 `from_orders` 集成）
-- [ ] `backtest/result.py` — BacktestResult（指标 + 净值曲线 + 回撤 + 序列化）
-- [ ] CLI `backtest` 子命令
-- [ ] 单元测试 — 覆盖等权调仓 / score 加权 / signal 过滤 / 空仓
+**Plan 03-02（Wave 2）：回测引擎核心** — requirements: BACK-01~04 ✅ COMPLETE
+- [x] `backtest/config.py` — BacktestConfig（frozen dataclass）
+- [x] `backtest/engine.py` — BacktestEngine（vectorbt v1 `from_orders` 集成）
+- [x] `backtest/result.py` — BacktestResult（指标 + 净值曲线 + 回撤 + 序列化）
+- [x] 单元测试 — 24 个测试覆盖等权调仓 / score 加权 / signal 过滤 / 空仓
 
 **Plan 03-03（Wave 3）：API 层 + adj_nav 回填** — requirements: DATA-01~03, BACK-01~04
 - [ ] `api/routes/backtest.py` — POST `/api/backtest/run`
