@@ -3,7 +3,7 @@
 **Current milestone:** v1.0
 **Status:** initialized
 **Started:** 2026-04-19
-**Stopped at:** 2026-04-20 — Phase 3 Wave 2 完成，待主人决定 Wave 3/4 启动时机
+**Stopped at:** 2026-04-20 — Phase 3 Plan 03-03 完成，API 路由 + CLI backtest + adj_nav 回填脚本全部就绪
 
 ## Project Reference
 
@@ -19,7 +19,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 | 0 | Claude 设计系统 | ✅ 初版已交付 — Token 三层体系 + 6 原子组件 + 3 Hook + framer-motion。等主人完成 design-audit 后对照微调 |
 | 1 | 后端 API 层 | ✅ COMPLETE — 6 个 endpoint 全部注册并通过验证，CORS 已配置，可直接对接前端 |
 | 2 | 前端仪表盘 | ✅ COMPLETE — 5 个 branch 全部完成，所有页面已对接真实 API |
-| 3 | 回测引擎 | 🚧 IN PROGRESS — Wave 1 完成，Wave 2 执行中 |
+| 3 | 回测引擎 | 🚧 IN PROGRESS — Wave 1~3 完成，待 Wave 4 前端回测页 |
 | 4 | 定时任务 | ⏳ PENDING |
 | 5 | 回测展示 | ⏳ PENDING |
 
@@ -79,11 +79,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [x] `backtest/result.py` — BacktestResult（指标 + 净值曲线 + 回撤 + 序列化）
 - [x] 单元测试 — 24 个测试覆盖等权调仓 / score 加权 / signal 过滤 / 空仓
 
-**Plan 03-03（Wave 3）：API 层 + adj_nav 回填** — requirements: DATA-01~03, BACK-01~04
-- [ ] `api/routes/backtest.py` — POST `/api/backtest/run`
-- [ ] `api/main.py` — 注册回测路由
-- [ ] `scripts/backfill_adj_nav.py` — adj_nav 历史回填脚本（断点续传）
-- [ ] 全量回填 — 后台运行，记录进度
+**Plan 03-03（Wave 3）：API 层 + adj_nav 回填** — requirements: DATA-01~03, BACK-01~04 ✅ COMPLETE
+- [x] `api/routes/backtest.py` — POST `/api/backtest/run`
+- [x] `api/main.py` — 注册回测路由
+- [x] `scripts/backfill_adj_nav.py` — adj_nav 历史回填脚本（断点续传）
+- [x] 全量回填 — 后台运行，记录进度
 
 **Plan 03-04（Wave 4）：前端回测页** — requirements: BACK-03, BACK-04
 - [ ] `/backtest` 路由 — 配置面板 + 净值曲线 + 绩效卡片 + 调仓历史表
