@@ -19,3 +19,13 @@ export type { ChartPoint, ChartDataResponse, UseChartDataOptions } from './useCh
 
 export { useStats } from './useStats'
 export type { DashboardStats } from './useStats'
+
+export { useBacktest } from './useBacktest'
+export type {
+  BacktestRequest,
+  BacktestResponse,
+  BacktestResult,
+  BacktestStats,
+  BacktestConfig,
+  RebalanceEntry,
+} from './useBacktest'
