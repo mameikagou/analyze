@@ -3,7 +3,7 @@
 **Current milestone:** v1.0
 **Status:** initialized
 **Started:** 2026-04-19
-**Stopped at:** 2026-04-20 — Phase 3 Plan 03-03 完成，API 路由 + CLI backtest + adj_nav 回填脚本全部就绪
+**Stopped at:** 2026-04-20 — Phase 3 Plan 03-04 完成，前端回测页（/backtest 路由 + useBacktest hook + 侧边栏导航）全部就绪，Phase 3 全部完成
 
 ## Project Reference
 
@@ -19,7 +19,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 | 0 | Claude 设计系统 | ✅ 初版已交付 — Token 三层体系 + 6 原子组件 + 3 Hook + framer-motion。等主人完成 design-audit 后对照微调 |
 | 1 | 后端 API 层 | ✅ COMPLETE — 6 个 endpoint 全部注册并通过验证，CORS 已配置，可直接对接前端 |
 | 2 | 前端仪表盘 | ✅ COMPLETE — 5 个 branch 全部完成，所有页面已对接真实 API |
-| 3 | 回测引擎 | 🚧 IN PROGRESS — Wave 1~3 完成，待 Wave 4 前端回测页 |
+| 3 | 回测引擎 | ✅ COMPLETE — 4 个 plan 全部完成（因子层 + 回测引擎 + API 层 + 前端页） |
 | 4 | 定时任务 | ⏳ PENDING |
 | 5 | 回测展示 | ⏳ PENDING |
 
@@ -33,6 +33,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 | 2026-04-20 | Phase 3 回测框架与 adj_nav 回填并行推进 | 两者零耦合，框架先用现有 nav 验证，回填完成后切 adj_nav 只需改数据源一行 |
 | 2026-04-20 | Phase 3 采用"新增因子层 + 兼容层"策略 | 前端 API 已稳定，不改现有 `ScreenResult`/`ScoredFund` 返回格式。回测走新 `factors/` 包，现有 CLI/API 不受影响 |
 | 2026-04-20 | Phase 3 暂不支持 kind='weight' 因子，但预留接口 | 导入公开持仓做跟投回测是未来拓展，Phase 3 核心是验证 MA + 三因子的有效性 |
+| 2026-04-20 | 前端回测页使用 Canvas 绘制净值曲线（非外部图表库） | 保持 bundle 体积可控，Phase 3 够用；后续如需多 series 叠加再引入专业图表库 |
 | 2026-04-19 | 前端设计系统（Phase 0）作为独立 Phase，阻塞前端页面开发，但后端可并行 | 设计考古由主人异步完成 |
 | 2026-04-19 | 工作流模式：Interactive（每步确认） | 主人选择 |
 | 2026-04-19 | Phase 1 完成，Phase 2 提前启动 — 不等设计考古 | 主人要求先做能用的前端，样式后续微调 |
@@ -85,10 +86,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [x] `scripts/backfill_adj_nav.py` — adj_nav 历史回填脚本（断点续传）
 - [x] 全量回填 — 后台运行，记录进度
 
-**Plan 03-04（Wave 4）：前端回测页** — requirements: BACK-03, BACK-04
-- [ ] `/backtest` 路由 — 配置面板 + 净值曲线 + 绩效卡片 + 调仓历史表
-- [ ] `useBacktest` hook — POST `/api/backtest/run`
-- [ ] 侧边栏导航更新
+**Plan 03-04（Wave 4）：前端回测页** — requirements: BACK-03, BACK-04 ✅ COMPLETE
+- [x] `/backtest` 路由 — 配置面板 + 净值曲线 + 绩效卡片 + 调仓历史表
+- [x] `useBacktest` hook — POST `/api/backtest/run`
+- [x] 侧边栏导航更新
 
 ### 待开工（后续 Phase）
 - [ ] Phase 4：定时任务自动化（cron/schedule）
