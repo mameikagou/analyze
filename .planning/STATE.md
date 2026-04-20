@@ -19,7 +19,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 | 0 | Claude 设计系统 | ✅ 初版已交付 — Token 三层体系 + 6 原子组件 + 3 Hook + framer-motion。等主人完成 design-audit 后对照微调 |
 | 1 | 后端 API 层 | ✅ COMPLETE — 6 个 endpoint 全部注册并通过验证，CORS 已配置，可直接对接前端 |
 | 2 | 前端仪表盘 | ✅ COMPLETE — 5 个 branch 全部完成，所有页面已对接真实 API |
-| 3 | 回测引擎 | 📐 DESIGN_READY — 方案已冻结，见 `.planning/BACKTEST_DESIGN.md` |
+| 3 | 回测引擎 | 📐 PLANNED — 4 个 plan 已创建，见 `.planning/phases/03-backtest/` |
 | 4 | 定时任务 | ⏳ PENDING |
 | 5 | 回测展示 | ⏳ PENDING |
 
@@ -62,10 +62,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [x] **Branch 4** `feat/fund-detail-page`：新建 `/funds/$code` 动态路由 + 详情页布局 — ✅ COMPLETE
 - [x] **Branch 5** `feat/pages-migrate`：4 个页面迁移（Dashboard/FundList/Screening/Chat），mock → 真数据 — ✅ COMPLETE
 
-### Phase 3（设计已冻结 📐）— 回测引擎
-详见 `.planning/BACKTEST_DESIGN.md`，4 周执行计划：
+### Phase 3（📐 PLANNED — 4 个 plan 已创建）— 回测引擎
+详见 `.planning/phases/03-backtest/`（gsd 标准格式）
 
-**Week 1：因子层 + 数据加载**
+**Plan 03-01（Wave 1）：因子层 + 数据加载** — requirements: BACK-01, BACK-02
 - [ ] `factors/base.py` — BaseFactor + FactorOutput 抽象契约
 - [ ] `factors/technical.py` — MACrossFactor（MA 多头排列信号）
 - [ ] `factors/quant.py` — MomentumFactor / SharpeFactor / DrawdownFactor
@@ -73,23 +73,23 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [ ] `storage.py` — 新增 `load_nav_panel()` 宽表加载方法
 - [ ] 单元测试 — 每个因子至少 2 个用例
 
-**Week 2：回测引擎核心**
+**Plan 03-02（Wave 2）：回测引擎核心** — requirements: BACK-01~04
 - [ ] `backtest/config.py` — BacktestConfig（frozen dataclass）
 - [ ] `backtest/engine.py` — BacktestEngine（vectorbt v1 `from_orders` 集成）
 - [ ] `backtest/result.py` — BacktestResult（指标 + 净值曲线 + 回撤 + 序列化）
-- [ ] 跑通第一个端到端回测（MA过滤 + 三因子打分 + 月度调仓 + Top10）
-- [ ] 基准对比 — 同期沪深300收益 vs 策略收益
+- [ ] CLI `backtest` 子命令
 - [ ] 单元测试 — 覆盖等权调仓 / score 加权 / signal 过滤 / 空仓
 
-**Week 3：API 层 + adj_nav 回填**
+**Plan 03-03（Wave 3）：API 层 + adj_nav 回填** — requirements: DATA-01~03, BACK-01~04
 - [ ] `api/routes/backtest.py` — POST `/api/backtest/run`
 - [ ] `api/main.py` — 注册回测路由
 - [ ] `scripts/backfill_adj_nav.py` — adj_nav 历史回填脚本（断点续传）
 - [ ] 全量回填 — 后台运行，记录进度
 
-**Week 4：前端回测页 + 打磨**
+**Plan 03-04（Wave 4）：前端回测页** — requirements: BACK-03, BACK-04
 - [ ] `/backtest` 路由 — 配置面板 + 净值曲线 + 绩效卡片 + 调仓历史表
-- [ ] 前端对接 — TV Charts 画策略曲线 + 基准曲线
+- [ ] `useBacktest` hook — POST `/api/backtest/run`
+- [ ] 侧边栏导航更新
 
 ### 待开工（后续 Phase）
 - [ ] Phase 4：定时任务自动化（cron/schedule）
