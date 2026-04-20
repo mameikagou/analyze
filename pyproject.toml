@@ -34,5 +34,6 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "jupyter>=1.1.1",
     "pytest>=9.0.2",
 ]
