@@ -1076,5 +1076,119 @@ def cmd_score(
     click.echo("下一步: 把报告文件拖进 Claude / Gemini AI Studio 进行深度分析")
 
 
+# =====================================================================
+# 子命令 6: backtest — 回测执行
+# =====================================================================
+
+@main.command("backtest")
+@click.option("--strategy", default="three_factor", help="打分因子")
+@click.option("--signal", default="ma_cross_20_60", help="信号过滤因子")
+@click.option("--start-date", required=True, help="开始日期 YYYY-MM-DD")
+@click.option("--end-date", required=True, help="结束日期 YYYY-MM-DD")
+@click.option("--market", default="cn", help="市场: cn/us/hk")
+@click.option("--top-n", default=10, help="持仓数量")
+@click.option("--rebalance", default="ME", help="调仓频率")
+@click.option("--fee-rate", default=0.0015, help="申购费率")
+@click.option("--output", help="输出文件路径（默认 stdout）")
+@click.pass_context
+def cmd_backtest(
+    ctx: click.Context,
+    strategy: str,
+    signal: str,
+    start_date: str,
+    end_date: str,
+    market: str,
+    top_n: int,
+    rebalance: str,
+    fee_rate: float,
+    output: str | None,
+) -> None:
+    """执行回测并输出报告。
+
+    用法示例:
+        uv run fund-screener backtest --start-date 2020-01-01 --end-date 2024-12-31
+        uv run fund-screener backtest --strategy momentum --top-n 5 --output result.json
+    """
+    import json
+
+    from fund_screener.backtest.config import BacktestConfig
+    from fund_screener.backtest.engine import BacktestEngine
+    from fund_screener.factors.composite import CompositeFactor
+    from fund_screener.factors.quant import MaxDrawdownFactor, MomentumFactor, SharpeFactor
+    from fund_screener.factors.technical import MACrossFactor
+    from fund_screener.storage import DataStore
+
+    config = load_config(ctx.obj["config_path"])
+    _setup_logging(ctx.obj.get("verbose", False))
+
+    if not Path(config.db_path).exists():
+        click.echo("错误: 数据库不存在，请先运行数据采集")
+        sys.exit(1)
+
+    # Factor registry (same as API route — keep in sync)
+    factor_registry: dict[str, type] = {
+        "ma_cross_20_60": lambda: MACrossFactor(20, 60),
+        "momentum": lambda: MomentumFactor(20),
+        "sharpe": lambda: SharpeFactor(252),
+        "drawdown": lambda: MaxDrawdownFactor(252),
+        "three_factor": lambda: CompositeFactor(
+            factors=[MomentumFactor(), SharpeFactor(), MaxDrawdownFactor()],
+            weights=[0.4, 0.25, 0.35],
+            name="three_factor",
+        ),
+    }
+
+    if strategy not in factor_registry:
+        click.echo(f"错误: 未知打分因子: {strategy}")
+        sys.exit(1)
+    score_factor = factor_registry[strategy]()
+
+    signal_filter = None
+    if signal and signal in factor_registry:
+        signal_filter = factor_registry[signal]()
+
+    with DataStore(config.db_path) as store:
+        nav_panel = store.load_nav_panel(
+            market=market,
+            start_date=start_date,
+            end_date=end_date,
+            use_adj_nav=False,
+        )
+
+    if nav_panel.empty:
+        click.echo("错误: 指定时间范围内无数据")
+        sys.exit(1)
+
+    bt_config = BacktestConfig(
+        top_n=top_n,
+        rebalance_freq=rebalance,
+        weighting="equal",
+        fee_rate=fee_rate,
+        signal_filter=signal_filter,
+    )
+    engine = BacktestEngine(nav_panel, bt_config)
+    result = engine.run(score_factor)
+
+    response = result.to_api_response()
+
+    if output:
+        with open(output, "w", encoding="utf-8") as f:
+            json.dump(response, f, ensure_ascii=False, indent=2)
+        click.echo(f"回测结果已保存: {output}")
+    else:
+        # Pretty print summary to stdout
+        stats = response["stats"]
+        click.echo()
+        click.echo(f"回测结果: {response['factor_name']}")
+        click.echo("=" * 55)
+        click.echo(f"  总收益率:     {stats['total_return']:+.2f}%")
+        click.echo(f"  年化收益率:   {stats['annual_return']:+.2f}%")
+        click.echo(f"  夏普比率:     {stats['sharpe_ratio']:.2f}")
+        click.echo(f"  最大回撤:     {stats['max_drawdown']:+.2f}%")
+        click.echo(f"  胜率:         {stats['win_rate']:.1f}%")
+        click.echo(f"  总交易次数:   {stats['total_trades']}")
+        click.echo()
+
+
 if __name__ == "__main__":
     main()
