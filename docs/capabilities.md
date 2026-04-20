@@ -1,6 +1,6 @@
 # Fund Screener v1.0 — 功能全景图
 
-> 生成时间: 2026-04-19 | 对应代码版本: `feat/ui-components` branch
+> 生成时间: 2026-04-20 | 对应代码版本: `main` branch (Phase 3 完成)
 
 ---
 
@@ -24,6 +24,7 @@
 | `/api/screening` | GET | MA 筛选结果（按日期/市场/MA差值过滤） | `useScreening` |
 | `/api/chart/{code}` | GET | 净值历史时序（供 TV Charts） | `useChartData` |
 | `/api/stats` | GET | 仪表盘统计（总基金数/筛选数/数据量等） | `useStats` |
+| `/api/backtest/run` | POST | 策略回测（因子选择 + 参数配置 → 绩效指标） | `useBacktest` |
 
 **技术细节**:
 - CORS 全开放（开发阶段）
@@ -40,6 +41,7 @@
 | `correlation` | 底层相关性矩阵（余弦相似度） | 已有持仓数据 |
 | `bulk-fetch` | 异步批量抓取净值+详情 | — |
 | `score` | 量化打分排行榜（三因子 Z-Score） | 已入库净值数据 |
+| `backtest` | 策略回测（因子组合 + 调仓 + 绩效指标） | 已入库净值数据 |
 | `--db-stats` | 查看数据湖统计信息 | 已有数据库 |
 | `--update-sectors` | 更新申万行业映射表 | — |
 
@@ -53,9 +55,141 @@
 
 **架构模式**: 抽象中间层 — `CompositeCNFetcher` 按 `config.yaml` 路由表选择 provider，新增数据源只需注册 provider 实例即可。
 
-### 2.4 MA 均线筛选引擎
+#### 2.3.1 adj_nav 历史回填
 
-#### 2.4.1 核心信号：MA 多头排列
+净值数据中 `adj_nav`（复权净值）用于回测，但早期入库时可能为 NULL。回填脚本独立运行：
+
+- 遍历所有 `adj_nav IS NULL` 的基金
+- 逐基金拉取历史复权净值，UPDATE `nav_records`
+- `backfill_log` 表记录已完成 fund_id，支持断点续传
+- 每基金 commit + `sleep(0.5)` 限速
+
+```bash
+uv run python -m fund_screener.scripts.backfill_adj_nav
+```
+
+### 2.4 因子层 (`factors/`)
+
+因子层是回测引擎的输入层，遵循 ARCHITECTURE.md 两条核心原则：**因子与策略解耦**，**信号是唯一契约**。
+
+#### 2.4.1 设计哲学
+
+- **纯矩阵运算**: 不读 DB、不调 API，输入是 `nav_panel` (date × fund_code)，输出是 `FactorOutput`
+- **面板级计算**: 一次性算完所有基金、所有日期，禁止逐行循环
+- **不可变输出**: `FactorOutput(frozen=True)` 防止意外 mutation
+- **统一契约**: 所有因子无论内部怎么算，最终吐出同一种格式
+
+#### 2.4.2 因子类型
+
+| kind | 含义 | 值类型 | 用途 |
+|------|------|--------|------|
+| `signal` | 持仓信号 | bool | True=持有，False=空仓（如 MA 多头排列） |
+| `score` | 连续打分 | float | 越大越好，用于排序选 Top N |
+| `weight` | 目标权重 | float | sum≤1.0（预留，Phase 3 暂不支持） |
+
+#### 2.4.3 已有因子
+
+| 因子 | 类 | kind | 核心逻辑 | 默认参数 |
+|------|-----|------|----------|----------|
+| **MA 交叉** | `MACrossFactor` | signal | MA_short > MA_long | short=20, long=60 |
+| **动量** | `MomentumFactor` | score | (nav - MA) / MA | ma_period=20 |
+| **夏普** | `SharpeFactor` | score | 滚动年化夏普 | lookback=252, rf=0.02 |
+| **最大回撤** | `MaxDrawdownFactor` | score | 滚动最大回撤（负数） | lookback=252 |
+| **三因子组合** | `CompositeFactor` | score | Z-Score 标准化 + 加权 | 动量0.4/夏普0.25/回撤0.35 |
+
+#### 2.4.4 CompositeFactor 组合机制
+
+```
+Step 1: 每个子因子 compute(nav_panel) → 分数矩阵
+Step 2: 对每个因子做横截面 Z-Score（按日期分组，每行独立）
+        Z = (x - row_mean) / row_std, std=0 → 0
+Step 3: 按权重加权求和
+```
+
+**语法糖**: `momentum + sharpe` → `CompositeFactor([momentum, sharpe], [0.5, 0.5])`
+
+**约束**: 只能组合 `kind='score'` 的因子，signal/weight 因子会抛 `ValueError`。
+
+#### 2.4.5 NaN 处理策略
+
+| 场景 | 处理方式 |
+|------|----------|
+| signal 因子中 NaN | → False（不可交易） |
+| score 因子中 NaN（数据不足） | 保留 NaN，rolling 自动跳过 |
+| Z-Score 时 std=0 | → fillna(0)，该因子该日不贡献分数 |
+| MA=0 除零风险 | `replace(0, np.nan)` 避免 inf |
+
+---
+
+### 2.5 回测引擎 (`backtest/`)
+
+回测引擎只做一件事：**把因子信号变成绩效指标**。遵循 ARCHITECTURE.md 原则三。
+
+#### 2.5.1 核心流程
+
+```
+输入: nav_panel (date × fund_code) + score_factor + config
+  │
+  ├─ Step 1: score_factor.compute(nav) → 分数矩阵
+  ├─ Step 2: signal_filter.compute(nav) → 过滤 mask（-inf 标记淘汰）
+  ├─ Step 3: _build_target_weights() → 调仓日权重矩阵
+  │           按 rebalance_freq 定期调仓，选 Top N
+  │           等权: 1/N  |  score 加权: softmax 归一化
+  └─ Step 4: vectorbt Portfolio.from_orders() → 绩效指标
+              size_type='targetpercent'（Numba C 级别资金管理）
+              cash_sharing=True（共享现金池）
+              fees（自动扣除手续费）
+
+输出: BacktestResult
+  ├─ stats(): 总收益、年化收益、夏普、最大回撤、胜率...
+  ├─ equity_curve(): 每日组合总价值
+  ├─ drawdown_curve(): 每日回撤百分比
+  ├─ rebalance_history(): 调仓日持仓明细
+  └─ to_api_response(): JSON 序列化（供前端）
+```
+
+#### 2.5.2 BacktestConfig 配置
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `top_n` | 10 | 每次调仓选多少只基金 |
+| `rebalance_freq` | "ME" | 调仓频率：ME=月末, W-FRI=周五, QE=季末 |
+| `weighting` | "equal" | equal=等权, score=按分数加权 |
+| `fee_rate` | 0.0015 | 单边交易成本（0.15%） |
+| `init_cash` | 1_000_000 | 初始资金 |
+| `signal_filter` | None | 信号过滤因子（如 MACrossFactor） |
+| `use_adj_nav` | False | Phase 3 先 False，回填后切 True |
+
+#### 2.5.3 权重分配策略
+
+**等权 (equal)**:
+```python
+w = 1.0 / len(top_funds)  # 严格等于 1.0
+```
+
+**分数加权 (score)**:
+```python
+exp_scores = np.exp(top_funds - top_funds.max())  # softmax
+normalized = exp_scores / exp_scores.sum()         # 和严格等于 1.0
+```
+
+用 softmax 替代 min-max：保持分数相对比例，避免负数和大值问题，同时保证权重和精确为 1.0（vectorbt targetpercent 要求）。
+
+#### 2.5.4 关键边界处理
+
+| 场景 | 处理 |
+|------|------|
+| 调仓日无有效候选 | 全部权重设为 0.0（空仓） |
+| top_n > 有效候选数 | 只选有效候选，等权分配 |
+| signal_filter 传错 kind | 抛 ValueError（不静默失败） |
+| nav_panel 含 NaN（停牌） | vectorbt 自动跳过，保持当前持仓 |
+| 分数全为负数 | softmax 仍正常工作，选"相对最好"的 |
+
+---
+
+### 2.6 MA 均线筛选引擎
+
+#### 2.6.1 核心信号：MA 多头排列
 
 筛选逻辑非常简单，但背后有明确的交易哲学支撑：
 
@@ -83,7 +217,7 @@
 > MA 交叉是**滞后指标**，它确认趋势而非预测趋势。通过筛选 ≠ 一定赚钱。
 > 这是过滤器，不是预测器。它的价值是帮你把全市场 10000+ 基金压缩到几十只"当前处于趋势中"的标的，降低研究范围。
 
-#### 2.4.2 多周期涨跌幅统计
+#### 2.6.2 多周期涨跌幅统计
 
 对每只通过筛选的基金，额外计算 5 个周期的累计涨跌幅：
 
@@ -101,7 +235,7 @@
 
 **数据不足处理**: 某周期数据不够 → 填 `None`。宁可没有，不给误导数字。
 
-#### 2.4.3 当日涨跌幅
+#### 2.6.3 当日涨跌幅
 
 从净值序列最近两日直接计算：
 
@@ -111,7 +245,7 @@ daily_change = (today_nav - yesterday_nav) / yesterday_nav * 100
 
 所有市场统一逻辑，不依赖外部 API（旧版 akshare 需要单独调用全市场涨跌幅接口，新版直接从已有 nav_df 计算，零额外请求）。
 
-#### 2.4.4 申购限额标注（CN 市场专属）
+#### 2.6.4 申购限额标注（CN 市场专属）
 
 A 股基金有个特殊问题：**限购**。
 
@@ -137,7 +271,7 @@ A 股基金有个特殊问题：**限购**。
 
 **默认行为**: 只标注，不过滤。所有通过 MA 的基金都保留，让用户自己判断要不要买限额的。
 
-#### 2.4.5 完整筛选流程（CLI 默认命令）
+#### 2.6.5 完整筛选流程（CLI 默认命令）
 
 ```
 Step 0: 加载配置 config.yaml
@@ -180,7 +314,7 @@ Step 5: 生成 Markdown 报告
    └─ 附加 LLM 分析提示词
 ```
 
-#### 2.4.6 防御性编程
+#### 2.6.6 防御性编程
 
 | 场景 | 处理 |
 |------|------|
@@ -193,17 +327,17 @@ Step 5: 生成 Markdown 报告
 
 ---
 
-### 2.5 量化打分引擎
+### 2.7 量化打分引擎
 
 量化打分引擎解决一个核心问题：**MA 筛选通过的几百只基金，谁更值得买？**
 
-#### 2.5.1 设计哲学
+#### 2.7.1 设计哲学
 
 - **打分层是纯计算**: 不访问网络、不调 API，输入是 (FundInfo, nav_df) 列表
 - **横截面比较**: 所有基金在同一套标准下打分，分数可比
 - **多因子融合**: 单个因子都有盲点，组合使用降低误判
 
-#### 2.5.2 三因子定义
+#### 2.7.2 三因子定义
 
 | 因子 | 公式 | 方向 | 直觉含义 |
 |------|------|------|----------|
@@ -219,7 +353,7 @@ Step 5: 生成 Markdown 报告
 
 **夏普比率**: 日收益率 = `pct_change().dropna()`。超额收益 = 日收益率均值 - 日无风险利率（默认 2%/252）。年化 = 乘 `sqrt(252)`。**注意**: 年化的是比值而非收益本身——收益率乘 N 年化，波动率乘 sqrt(N) 年化，比值里 N 消掉变成 sqrt(N)。
 
-#### 2.5.3 Z-Score 标准化
+#### 2.7.3 Z-Score 标准化
 
 三因子量纲完全不同（动量是百分比、回撤是百分比、夏普是比值），不能直接加权。必须先标准化到同一尺度。
 
@@ -253,7 +387,7 @@ Step 4: 回撤方向反转
 | 单个 NaN | 该位置返回 0（不惩罚不奖励） |
 | 候选池 < 2 | 无法算标准差，返回全 0 |
 
-#### 2.5.4 加权求和与排名
+#### 2.7.4 加权求和与排名
 
 ```
 composite_score = w_momentum * z_momentum
@@ -275,7 +409,7 @@ scoring:
 
 排名: 按 `composite_score` 降序，取 Top N（默认 30）。
 
-#### 2.5.5 过滤层
+#### 2.7.5 过滤层
 
 在进入打分之前，有三层过滤确保打分池质量：
 
@@ -301,7 +435,7 @@ nav_count >= min_nav_days (默认 60)
 
 三因子中任一为 NaN → 跳过。NaN 意味着数据有问题（如零波动导致夏普除零、数据不足导致动量无法计算），不应该参与排名。
 
-#### 2.5.6 完整打分流程（CLI `score` 子命令）
+#### 2.7.6 完整打分流程（CLI `score` 子命令）
 
 ```
 Step 1: 从 DB 读取基金列表
@@ -335,7 +469,7 @@ Step 5: 补充 Top 10 持仓（从 DB 读，不调 API）
 Step 6: 生成 Markdown 打分报告
 ```
 
-#### 2.5.7 筛选 vs 打分的关系
+#### 2.7.7 筛选 vs 打分的关系
 
 | 维度 | MA 筛选 | 量化打分 |
 |------|---------|----------|
@@ -350,11 +484,11 @@ Step 6: 生成 Markdown 打分报告
 
 ---
 
-### 2.6 OLAP 量化分析
+### 2.8 OLAP 量化分析
 
 在 MA 筛选和量化打分之外，提供三个独立的深度分析工具，用于特定场景下的辅助决策。
 
-#### 2.6.1 横截面动量扫描 (`scan-momentum`)
+#### 2.8.1 横截面动量扫描 (`scan-momentum`)
 
 **场景**: 你已经知道哪些基金处于多头排列，但你想找"趋势中最强势、且今天刚好回调"的标的 —— 经典右侧回踩买入信号。
 
@@ -390,7 +524,7 @@ WHERE ma_short_val > ma_long_val   -- 多头排列
 
 **输出**: 按 MA 差值降序排列的回踩标的列表（差值越大，趋势越强）。
 
-#### 2.6.2 风格漂移检测 (`detect-drift`)
+#### 2.8.2 风格漂移检测 (`detect-drift`)
 
 **场景**: 你持有某只主动基金半年，发现它最近表现和预期不符 —— 是不是基金经理偷偷换了赛道？
 
@@ -406,7 +540,7 @@ WHERE ma_short_val > ma_long_val   -- 多头排列
 - 退出持仓列表（上季度有，这季度消失的）
 - 大幅调仓明细（单只个股权重变动 > 3%）
 
-#### 2.6.3 底层相关性矩阵 (`correlation`)
+#### 2.8.3 底层相关性矩阵 (`correlation`)
 
 **场景**: 你买了 5 只基金，分散投资 —— 但它们底层持仓是否高度重叠？买了 5 只"变种沪深300"没有意义。
 
@@ -429,7 +563,7 @@ A, B = 两只基金的行业权重向量
 
 **实现**: SQL 层 JOIN `holdings` + `stock_sector_mapping` 聚合行业权重，Python 层计算余弦相似度（SQLite 无向量运算）。
 
-### 2.7 数据湖 (`storage.py`)
+### 2.9 数据湖 (`storage.py`)
 
 | 表 | 用途 | 关键索引 |
 |----|------|----------|
@@ -442,7 +576,7 @@ A, B = 两只基金的行业权重向量
 
 **Schema 版本管理**: PRAGMA user_version，支持 V1→V2→V3 链式迁移。
 
-### 2.8 基础设施
+### 2.10 基础设施
 
 | 模块 | 功能 |
 |------|------|
@@ -464,6 +598,7 @@ A, B = 两只基金的行业权重向量
 | `/funds` | 基金列表 | `useFunds(page=1, pageSize=100)` | ✅ 真数据 |
 | `/funds/$code` | 基金详情 | `useFundDetail` + `useChartData(days=180)` | ✅ 真数据 |
 | `/screening` | 筛选结果 | `useScreening(limit=50)` | ✅ 真数据 |
+| `/backtest` | 策略回测 | `useBacktest` | ✅ 真数据 |
 | `/chat` | AI 分析 | mock 延迟响应 | ⏳ 待接入后端 |
 
 ### 3.2 业务组件 (`components/views/`)
@@ -490,10 +625,24 @@ A, B = 两只基金的行业权重向量
 | `useScreening` | GET `/api/screening` | 日期/市场/MA差值过滤 |
 | `useChartData` | GET `/api/chart/{code}` | 天数范围 (7~730) |
 | `useStats` | GET `/api/stats` | 仪表盘全量统计 |
+| `useBacktest` | POST `/api/backtest/run` | 策略回测配置 + 结果 |
 
-**边界约定**: Hooks 层负责 snake_case → camelCase 映射，页面层零转换。
+**边界约定**: Hooks 层负责 snake_case → camelCase 映射，页面层零转换。useBacktest 用 `useMutation`（POST 请求），其余用 `useQuery`（GET 请求）。
 
-### 3.4 设计系统
+### 3.4 回测页 (`/backtest`)
+
+**功能**: 配置回测参数 → 执行回测 → 展示结果。
+
+**配置面板**: 8 个参数 — 打分因子、信号过滤、持仓数量、调仓频率、权重分配、申购费率、起止日期。
+
+**结果展示**:
+- 4 张绩效卡片：总收益率、年化收益率、最大回撤、夏普比率（复用 `StatsCard`）
+- Canvas 绘制净值曲线 + 回撤阴影叠加（Retina 适配 + 容器自适应）
+- 可展开调仓历史表：点击行展开持仓明细（基金代码 + 权重）
+
+**状态管理**: `useMutation` 执行回测，`isPending` 控制加载 spinner，`error` 显示红色提示。
+
+### 3.5 设计系统
 
 | 层级 | 内容 |
 |------|------|
@@ -503,14 +652,23 @@ A, B = 两只基金的行业权重向量
 | **原子组件** | Surface / AutoTextarea / IconButton / TextButton / Prose / Composer |
 | **shadcn/ui** | Button / Card / Input / Badge / Table / ScrollArea / Separator / Skeleton |
 
-### 3.5 图表系统
+### 3.6 图表系统
 
-- **库**: TradingView Lightweight Charts
-- **功能**: 净值线 + MA20(实线) + MA60(虚线) 叠加
-- **市场感知**: CN 市场红涨绿跌（CSS data-market 驱动）
-- **MA 计算**: 前端滑动窗口实时计算
+| 场景 | 库 | 功能 |
+|------|-----|------|
+| 基金详情页 | TradingView Lightweight Charts | 净值线 + MA20(实线) + MA60(虚线) 叠加 |
+| 回测结果页 | Canvas（原生） | 净值曲线 + 回撤阴影，无外部依赖 |
 
-### 3.6 状态管理
+**TV Charts 细节**:
+- 市场感知: CN 市场红涨绿跌（CSS data-market 驱动）
+- MA 计算: 前端滑动窗口实时计算
+
+**Canvas 回测图表细节**:
+- `devicePixelRatio` 适配（Retina 屏不模糊）
+- 容器自适应尺寸（非固定 800×300）
+- 防御：数据点 < 2 时不绘制
+
+### 3.7 状态管理
 
 - **服务端状态**: TanStack Query (staleTime: 5min)
 - **客户端状态**: Zustand (`appStore` — sidebarOpen)
@@ -530,6 +688,7 @@ A, B = 两只基金的行业权重向量
 | 数据验证 | Pydantic v2 |
 | 数据湖 | SQLite (WAL 模式) |
 | 数据分析 | pandas |
+| 回测引擎 | vectorbt v1 (Portfolio.from_orders) |
 | CLI | click |
 | HTTP 客户端 | httpx / yfinance / tushare / akshare |
 
@@ -558,6 +717,7 @@ A, B = 两只基金的行业权重向量
 | **0** | Claude 设计系统 | Token 三层体系 + 6 原子组件 + 3 交互 Hook + framer-motion |
 | **1** | 后端 API 层 | 6 端点 + CORS + SQLite 依赖注入 + 线程安全修复 |
 | **2** | 前端仪表盘 | 5 个页面 + 10 业务组件 + 5 API hooks + 真实数据对接 |
+| **3** | 回测引擎 | 因子层(5 因子) + 回测引擎(vectorbt) + API/CLI 回测 + 前端回测页 + adj_nav 回填 | Phase 1~2 |
 
 ---
 
@@ -565,9 +725,8 @@ A, B = 两只基金的行业权重向量
 
 | Phase | 名称 | 待做内容 | 依赖 |
 |-------|------|----------|------|
-| **3** | 回测引擎 | adj_nav 历史回填脚本、MA 策略回测（胜率/夏普）、回测框架 | 数据湖已有净值数据 |
 | **4** | 定时任务 | cron/schedule 自动化、报告自动生成、任务日志监控 | Phase 3 |
-| **5** | 回测展示 | 回测结果可视化页面、策略对比图表 | Phase 3 |
+| **5** | 回测展示增强 | 多策略对比、参数敏感性分析、Walk-Forward 验证 | Phase 3 |
 | **—** | AI 聊天 | `/api/chat` 后端端点 + 前端接入 Vercel AI SDK | 可选 |
 
 ---
@@ -578,6 +737,9 @@ A, B = 两只基金的行业权重向量
 |------|------|------|
 | 2026-04-19 | SQLite 跨线程 crash | `check_same_thread=False` + yield 模式释放连接 |
 | 2026-04-19 | 前端 `.toFixed()` 空值 crash | 所有数值字段加 `number \| null` 类型 + `?.toFixed() ?? '—'` |
+| 2026-04-20 | MaxDrawdownFactor 忽略 lookback | 改为真正 rolling window：`start = max(0, i - lookback + 1)` |
+| 2026-04-20 | score 加权 min-max 归一化失真 | 改用 softmax，保持分数比例 + 精确权重和 |
+| 2026-04-20 | Canvas Retina 屏模糊 | `devicePixelRatio` + 容器自适应尺寸 |
 
 ---
 
@@ -595,6 +757,12 @@ uv run fund-screener --market all --verbose
 
 # CLI 打分
 uv run fund-screener score --market cn
+
+# CLI 回测
+uv run fund-screener backtest --start-date 2020-01-01 --end-date 2024-12-31
+
+# adj_nav 回填
+uv run python -m fund_screener.scripts.backfill_adj_nav
 
 # 查看数据湖
 uv run fund-screener --db-stats
