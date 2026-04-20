@@ -744,3 +744,119 @@ class DataStore:
             stats["db_size_mb"] = round(size_bytes / (1024 * 1024), 2)
 
         return stats
+
+    # ------------------------------------------------------------------
+    # 回测支撑：宽表净值面板加载
+    # ------------------------------------------------------------------
+
+    def load_nav_panel(
+        self,
+        market: str,
+        start_date: str,
+        end_date: str,
+        use_adj_nav: bool = False,
+    ) -> pd.DataFrame:
+        """
+        Load NAV wide panel for backtest factor computation.
+
+        从数据湖加载指定市场的净值数据，转换为宽表格式（date × fund_code），
+        供因子层做矩阵运算。
+
+        处理策略（BACKTEST_DESIGN.md §5.2 方案 C）：
+        1. SQL 查询长格式数据（code, date, effective_nav）
+        2. pivot 转成宽表：index=date, columns=fund_code
+        3. ffill(limit=5)：填充停牌等短期缺失（最多连续 5 天）
+        4. COALESCE(nr.adj_nav, nr.nav)：adj_nav 为 NULL 时 fallback 到 nav
+
+        Args:
+            market: 市场代码，如 "cn", "us", "hk"
+            start_date: 开始日期，格式 "YYYY-MM-DD"
+            end_date: 结束日期，格式 "YYYY-MM-DD"
+            use_adj_nav: 是否使用复权净值（Phase 3 先 False，回填完成后切 True）
+
+        Returns:
+            DataFrame: index=date(DatetimeIndex), columns=fund_code, values=净值
+            无数据时返回空 DataFrame（不抛异常）
+        """
+        nav_col = "adj_nav" if use_adj_nav else "nav"
+
+        # f-string 仅用于列名选择（"nav" 或 "adj_nav"，受控字面量，非用户输入）
+        # 实际参数用 ? 占位符防 SQL 注入
+        query = f"""
+        SELECT f.code, nr.date, COALESCE(nr.{nav_col}, nr.nav) as effective_nav
+        FROM nav_records nr
+        JOIN funds f ON nr.fund_id = f.id
+        WHERE f.market = ?
+          AND nr.date BETWEEN ? AND ?
+        ORDER BY nr.date ASC
+        """
+
+        try:
+            assert self._conn is not None
+            df = pd.read_sql_query(
+                query, self._conn, params=(market, start_date, end_date)
+            )
+        except Exception:
+            logger.warning(
+                "DataStore: load_nav_panel(%s, %s, %s) 查询失败",
+                market, start_date, end_date,
+                exc_info=True,
+            )
+            return pd.DataFrame()
+
+        if df.empty:
+            return pd.DataFrame()
+
+        df["date"] = pd.to_datetime(df["date"])
+        panel = df.pivot(index="date", columns="code", values="effective_nav")
+        panel = panel.ffill(limit=5)
+
+        return panel
+
+    def load_benchmark(
+        self,
+        benchmark_code: str,
+        start_date: str,
+        end_date: str,
+    ) -> pd.Series:
+        """
+        Load single benchmark index NAV series.
+
+        加载单只基准指数的净值序列，用于回测时的基准对比（如沪深300）。
+
+        Args:
+            benchmark_code: 基准代码，如 "000300.SH"
+            start_date: 开始日期，格式 "YYYY-MM-DD"
+            end_date: 结束日期，格式 "YYYY-MM-DD"
+
+        Returns:
+            Series: index=date(DatetimeIndex), values=净值
+            无数据时返回空 Series（dtype=float）
+        """
+        query = """
+        SELECT nr.date, COALESCE(nr.adj_nav, nr.nav) as effective_nav
+        FROM nav_records nr
+        JOIN funds f ON nr.fund_id = f.id
+        WHERE f.code = ?
+          AND nr.date BETWEEN ? AND ?
+        ORDER BY nr.date ASC
+        """
+
+        try:
+            assert self._conn is not None
+            df = pd.read_sql_query(
+                query, self._conn, params=(benchmark_code, start_date, end_date)
+            )
+        except Exception:
+            logger.warning(
+                "DataStore: load_benchmark(%s, %s, %s) 查询失败",
+                benchmark_code, start_date, end_date,
+                exc_info=True,
+            )
+            return pd.Series(dtype=float)
+
+        if df.empty:
+            return pd.Series(dtype=float)
+
+        df["date"] = pd.to_datetime(df["date"])
+        return df.set_index("date")["effective_nav"]

@@ -19,7 +19,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 | 0 | Claude 设计系统 | ✅ 初版已交付 — Token 三层体系 + 6 原子组件 + 3 Hook + framer-motion。等主人完成 design-audit 后对照微调 |
 | 1 | 后端 API 层 | ✅ COMPLETE — 6 个 endpoint 全部注册并通过验证，CORS 已配置，可直接对接前端 |
 | 2 | 前端仪表盘 | ✅ COMPLETE — 5 个 branch 全部完成，所有页面已对接真实 API |
-| 3 | 回测引擎 | 📐 PLANNED — 4 个 plan 已创建，见 `.planning/phases/03-backtest/` |
+| 3 | 回测引擎 | 🚧 IN PROGRESS — Wave 1 完成，Wave 2 执行中 |
 | 4 | 定时任务 | ⏳ PENDING |
 | 5 | 回测展示 | ⏳ PENDING |
 
@@ -65,13 +65,13 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 ### Phase 3（📐 PLANNED — 4 个 plan 已创建）— 回测引擎
 详见 `.planning/phases/03-backtest/`（gsd 标准格式）
 
-**Plan 03-01（Wave 1）：因子层 + 数据加载** — requirements: BACK-01, BACK-02
-- [ ] `factors/base.py` — BaseFactor + FactorOutput 抽象契约
-- [ ] `factors/technical.py` — MACrossFactor（MA 多头排列信号）
-- [ ] `factors/quant.py` — MomentumFactor / SharpeFactor / DrawdownFactor
-- [ ] `factors/composite.py` — CompositeFactor（Z-Score 标准化 + 加权）
-- [ ] `storage.py` — 新增 `load_nav_panel()` 宽表加载方法
-- [ ] 单元测试 — 每个因子至少 2 个用例
+**Plan 03-01（Wave 1）：因子层 + 数据加载** — requirements: BACK-01, BACK-02 ✅ COMPLETE
+- [x] `factors/base.py` — BaseFactor + FactorOutput 抽象契约
+- [x] `factors/technical.py` — MACrossFactor（MA 多头排列信号）
+- [x] `factors/quant.py` — MomentumFactor / SharpeFactor / DrawdownFactor
+- [x] `factors/composite.py` — CompositeFactor（Z-Score 标准化 + 加权）
+- [x] `storage.py` — 新增 `load_nav_panel()` 宽表加载方法
+- [x] 单元测试 — 30 个 test cases, 全部通过
 
 **Plan 03-02（Wave 2）：回测引擎核心** — requirements: BACK-01~04
 - [ ] `backtest/config.py` — BacktestConfig（frozen dataclass）
