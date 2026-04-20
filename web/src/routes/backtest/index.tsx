@@ -8,7 +8,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useRef, useEffect } from 'react'
 import { Loader2, Play, TrendingUp, TrendingDown, Activity, BarChart3 } from 'lucide-react'
-import { useBacktest } from '@/hooks/api'
+import { useBacktest, type RebalanceEntry } from '@/hooks/api'
 import { StatsCard } from '@/components/views/StatsCard'
 
 export const Route = createFileRoute('/backtest/')({
@@ -52,9 +52,15 @@ function BacktestPage() {
   const [startDate, setStartDate] = useState('2020-01-01')
   const [endDate, setEndDate] = useState('2024-12-31')
   const [market, setMarket] = useState('cn')
+  const [dateError, setDateError] = useState<string | null>(null)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (startDate >= endDate) {
+      setDateError('开始日期必须早于结束日期')
+      return
+    }
+    setDateError(null)
     runBacktest({
       scoreFactor,
       signalFilter: signalFilter || null,
@@ -219,7 +225,14 @@ function BacktestPage() {
         </form>
       </div>
 
-      {/* Error */}
+      {/* Date validation error */}
+      {dateError && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {dateError}
+        </div>
+      )}
+
+      {/* API Error */}
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           回测失败: {error instanceof Error ? error.message : '未知错误'}
@@ -294,12 +307,13 @@ function EquityCurveChart({
   data: Record<string, number>
   drawdown?: Record<string, number> | null
 }) {
-  // Simple canvas-based chart (no external chart lib dependency)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    const container = containerRef.current
+    if (!canvas || !container) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
@@ -307,8 +321,21 @@ function EquityCurveChart({
     const values = dates.map((d) => data[d])
     const ddValues = drawdown ? dates.map((d) => drawdown[d] ?? 0) : null
 
-    const width = canvas.width
-    const height = canvas.height
+    // 防御：数据点不足时不绘制
+    if (dates.length < 2) return
+
+    // 处理 devicePixelRatio：让 Canvas 在 Retina 屏上不模糊
+    const dpr = window.devicePixelRatio || 1
+    const cssWidth = container.clientWidth
+    const cssHeight = 300
+    canvas.width = cssWidth * dpr
+    canvas.height = cssHeight * dpr
+    canvas.style.width = `${cssWidth}px`
+    canvas.style.height = `${cssHeight}px`
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+    const width = cssWidth
+    const height = cssHeight
     const padding = { top: 20, right: 20, bottom: 30, left: 60 }
 
     const chartW = width - padding.left - padding.right
@@ -343,8 +370,9 @@ function EquityCurveChart({
     ctx.strokeStyle = 'var(--accent-primary)'
     ctx.lineWidth = 2
     ctx.beginPath()
-    dates.forEach((date, i) => {
-      const x = padding.left + (chartW * i) / (dates.length - 1)
+    const xStep = chartW / (dates.length - 1)
+    dates.forEach((_date, i) => {
+      const x = padding.left + i * xStep
       const y = padding.top + chartH * (1 - (values[i] - minVal) / valRange)
       if (i === 0) ctx.moveTo(x, y)
       else ctx.lineTo(x, y)
@@ -359,8 +387,8 @@ function EquityCurveChart({
 
       ctx.fillStyle = 'rgba(239, 68, 68, 0.15)'
       ctx.beginPath()
-      dates.forEach((date, i) => {
-        const x = padding.left + (chartW * i) / (dates.length - 1)
+      dates.forEach((_date, i) => {
+        const x = padding.left + i * xStep
         const y = padding.top + chartH * (1 - (ddValues[i] - ddMin) / ddRange)
         if (i === 0) ctx.moveTo(x, y)
         else ctx.lineTo(x, y)
@@ -377,23 +405,19 @@ function EquityCurveChart({
     ctx.textAlign = 'center'
     const labelIndices = [0, Math.floor(dates.length / 2), dates.length - 1]
     labelIndices.forEach((i) => {
-      const x = padding.left + (chartW * i) / (dates.length - 1)
+      const x = padding.left + i * xStep
       ctx.fillText(dates[i].slice(0, 7), x, height - 8)
     })
   }, [data, drawdown])
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={800}
-      height={300}
-      className="w-full"
-      style={{ maxWidth: '100%' }}
-    />
+    <div ref={containerRef} className="w-full">
+      <canvas ref={canvasRef} className="w-full" />
+    </div>
   )
 }
 
-function RebalanceTable({ data }: { data: Array<{ date: string; holdings: Record<string, number> }> }) {
+function RebalanceTable({ data }: { data: RebalanceEntry[] }) {
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
 
   return (
@@ -411,9 +435,8 @@ function RebalanceTable({ data }: { data: Array<{ date: string; holdings: Record
             const holdings = Object.entries(entry.holdings)
             const isExpanded = expandedRow === idx
             return (
-              <>
+              <React.Fragment key={`${entry.date}-${idx}`}>
                 <tr
-                  key={entry.date}
                   className="border-b border-[var(--border-subtle)] cursor-pointer hover:bg-[var(--bg-hover)]"
                   onClick={() => setExpandedRow(isExpanded ? null : idx)}
                 >
@@ -442,7 +465,7 @@ function RebalanceTable({ data }: { data: Array<{ date: string; holdings: Record
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             )
           })}
         </tbody>

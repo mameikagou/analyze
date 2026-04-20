@@ -285,10 +285,11 @@ class TestSharpeFactor:
         factor = SharpeFactor(lookback=20)
         output = factor.compute(nav)
 
-        # 所有值都应该是 NaN（零波动，std=0）
-        # 注意：pct_change() 第一个值是 NaN，但这里所有值都是 1.0，
-        # pct_change 全 0，std=0 → sharpe = NaN
-        assert output.values.isna().all().all()
+        # 分阶段验证：
+        # - 前 lookback 天 NaN：数据不足（rolling 窗口未填满）
+        # - lookback 天后 NaN：零波动导致 std=0
+        assert output.values.iloc[:20].isna().all().all(), "前 20 天应因数据不足而为 NaN"
+        assert output.values.iloc[20:].isna().all().all(), "20 天后应因零波动而为 NaN"
 
     def test_shape_invariant(self) -> None:
         """输出 shape 必须与输入一致。"""
@@ -368,8 +369,8 @@ class TestMaxDrawdownFactor:
         valid_values = output.values.iloc[2:, 0].dropna()
         assert (valid_values <= 0).all()
 
-    def test_first_two_days_nan(self) -> None:
-        """前 2 天返回 NaN（数据不足）。"""
+    def test_first_day_nan(self) -> None:
+        """第 0 天返回 NaN（只有一个价格点，无法计算回撤）。"""
         dates = pd.date_range("2024-01-01", periods=10, freq="D")
         values = [1.0 + i * 0.01 for i in range(10)]
         nav = pd.DataFrame({"FUND_A": values}, index=dates)
@@ -377,9 +378,10 @@ class TestMaxDrawdownFactor:
         factor = MaxDrawdownFactor(lookback=10)
         output = factor.compute(nav)
 
-        # 第 0、1 天必须是 NaN
+        # 第 0 天必须是 NaN（只有一个价格点）
         assert pd.isna(output.values.iloc[0, 0])
-        assert pd.isna(output.values.iloc[1, 0])
+        # 第 1 天有 2 个价格点，可以计算回撤（= 0，因为一直在涨）
+        assert output.values.iloc[1, 0] == 0.0
 
     def test_larger_drawdown_more_negative(self) -> None:
         """回撤越大，值越负。"""
@@ -425,6 +427,39 @@ class TestMaxDrawdownFactor:
         assert output.values.shape == nav.shape
         assert list(output.values.columns) == list(nav.columns)
         assert output.values.index.equals(nav.index)
+
+    def test_lookback_limits_window(self) -> None:
+        """验证 lookback 确实限制计算窗口（不是 expanding）。"""
+        # 构造 60 天序列：前 30 天涨到 1.3，后 30 天跌回 1.0
+        dates = pd.date_range("2024-01-01", periods=60, freq="D")
+        values = []
+        for i in range(60):
+            if i < 30:
+                values.append(1.0 + i * 0.01)
+            else:
+                values.append(1.3 - (i - 30) * 0.01)
+        nav = pd.DataFrame({"FUND_A": values}, index=dates)
+
+        # lookback=10：只看最近 10 天
+        factor_short = MaxDrawdownFactor(lookback=10)
+        output_short = factor_short.compute(nav)
+
+        # lookback=60：看全部 60 天
+        factor_long = MaxDrawdownFactor(lookback=60)
+        output_long = factor_long.compute(nav)
+
+        # 最后一天：
+        # - lookback=10 时，最后 10 天是 1.21→1.20→...→1.00，回撤从 1.21 算 ≈ -17%
+        # - lookback=60 时，历史高点是 1.30，回撤从 1.30 算 ≈ -23%
+        # 所以长 lookback 的回撤应该更深（更负）
+        dd_short = output_short.values.iloc[-1, 0]
+        dd_long = output_long.values.iloc[-1, 0]
+
+        # 两者都应该是负数（有回撤）
+        assert dd_short < 0
+        assert dd_long < 0
+        # 长窗口的回撤更深（更负）
+        assert dd_long < dd_short
 
 
 # ---------------------------------------------------------------------------

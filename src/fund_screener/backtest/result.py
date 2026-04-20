@@ -39,12 +39,14 @@ except ImportError as e:
     ) from e
 
 
-@dataclass
+@dataclass(frozen=True)
 class BacktestResult:
     """
     回测结果 —— 包含 vectorbt Portfolio 对象和衍生数据。
 
-    注意：Portfolio 对象不可 JSON 序列化，to_api_response() 负责提取可序列化的数据。
+    frozen=True 保证回测结果不可变，防止意外修改导致 to_api_response()
+    和 rebalance_history() 返回不一致的数据。Portfolio 对象内部有缓存状态，
+    frozen 只能保证引用不变，但已满足项目编码规范（PYTHON_STANDARDS.md §3）。
 
     Attributes:
         portfolio: vectorbt Portfolio 对象，内部持有回测的所有计算结果

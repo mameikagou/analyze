@@ -98,9 +98,17 @@ class BacktestEngine:
             filter_output = self.config.signal_filter.compute(
                 self.nav_panel, **context
             )
+            # 防御：signal_filter 必须是 kind='signal' 的因子
+            if filter_output.kind != "signal":
+                raise ValueError(
+                    f"signal_filter 必须是 kind='signal' 的因子，"
+                    f"但得到的是 kind='{filter_output.kind}' "
+                    f"({filter_output.name})"
+                )
+            # 显式处理：NaN → False（与 PYTHON_STANDARDS.md §6 一致）
+            mask = filter_output.values.fillna(False)
             # 被过滤掉的基金：分数设为 -inf（永远选不上）
-            # 用 where 语义：filter 为 True 的位置保留原分数，False 的位置设为 -inf
-            scores = scores.where(filter_output.values, other=-np.inf)
+            scores = scores.where(mask, other=-np.inf)
 
         # Step 3: 构建目标持仓权重矩阵
         target_weights = self._build_target_weights(scores)
@@ -185,11 +193,15 @@ class BacktestEngine:
                 weights.loc[dt, others] = 0.0
 
             elif self.config.weighting == "score":
-                # 按分数加权 —— min-max 归一化后加权
-                # 先处理负数：shift 到全正，避免负权重
-                min_score = top_funds.min()
-                shifted = top_funds - min_score + 1e-6  # 1e-6 避免全 0
-                normalized = shifted / shifted.sum()
+                # 按分数加权 —— softmax 归一化
+                # 用 softmax 替代 min-max：保持分数相对比例，避免负数和大值问题
+                # 同时避免 min-max 中 1e-6 偏移量对极端数据的扭曲
+                exp_scores = np.exp(top_funds - top_funds.max())
+                normalized = exp_scores / exp_scores.sum()
+                # 断言：权重和必须精确等于 1.0（vectorbt targetpercent 要求）
+                assert abs(normalized.sum() - 1.0) < 1e-9, (
+                    f"权重和不等于 1.0: {normalized.sum()}"
+                )
                 weights.loc[dt, normalized.index] = normalized.values
                 others = weights.columns.difference(normalized.index)
                 weights.loc[dt, others] = 0.0

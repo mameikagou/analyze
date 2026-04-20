@@ -62,7 +62,8 @@ class MACrossFactor(BaseFactor):
 
         # NaN 位置（基金未上市或数据缺失）置 False
         # 用 where 比 fillna 语义更清晰："只在 nav_panel 有值的位置保留信号，其他置 False"
-        signal = signal.where(nav_panel.notna(), False)
+        # 显式 .astype(bool) 防止 pandas 在某些版本中将 mixed bool/NaN 升级为 object dtype
+        signal = signal.where(nav_panel.notna(), False).astype(bool)
 
         return FactorOutput(
             values=signal,

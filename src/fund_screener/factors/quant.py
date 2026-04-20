@@ -46,7 +46,9 @@ class MomentumFactor(BaseFactor):
             FactorOutput，values 为浮点矩阵，kind="score"
         """
         ma = nav_panel.rolling(window=self.ma_period, min_periods=self.ma_period).mean()
-        momentum = (nav_panel - ma) / ma
+        # 防御：MA=0 会导致除零产生 inf（与 risk_metrics.py 策略一致）
+        ma_safe = ma.replace(0, np.nan)
+        momentum = (nav_panel - ma_safe) / ma_safe
 
         return FactorOutput(
             values=momentum,
@@ -98,7 +100,9 @@ class SharpeFactor(BaseFactor):
         ).std(ddof=1)
 
         # std == 0 → 除零 → 用 replace(0, np.nan) 避免 inf
-        sharpe = (rolling_mean / rolling_std.replace(0, np.nan)) * math.sqrt(252)
+        # np.errstate 抑制全 NaN 列的 RuntimeWarning（Degrees of freedom <= 0）
+        with np.errstate(invalid="ignore"):
+            sharpe = (rolling_mean / rolling_std.replace(0, np.nan)) * math.sqrt(252)
 
         return FactorOutput(
             values=sharpe,
@@ -116,11 +120,12 @@ class MaxDrawdownFactor(BaseFactor):
     CompositeFactor 在组合时会根据权重决定方向（通常给负权重，因为回撤是反向指标）。
 
     性能注意：
-    当前实现是 O(n²) 的朴素算法 —— 对每个日期 i，计算 window[0:i+1] 的 cummax 和回撤。
-    对于 1000 只基金 × 2000 天的面板，可能较慢。
+    当前实现是 O(n × lookback) 的朴素算法 —— 对每个日期 i，取最近 lookback 天
+    的窗口计算 cummax 和回撤。对于 1000 只基金 × 2000 天 × lookback=252 的面板，
+    计算量约为 1000 × 2000 × 252 ≈ 5 亿次操作，可能较慢。
     优化路径（未来）：
     1. 用 numba 加速 _rolling_max_dd 函数
-    2. 预计算全区间回撤后截断到 lookback 窗口
+    2. 用单调栈实现 O(n) 的滑动窗口最大回撤（LeetCode 239 变种）
     3. 用 expanding().apply() 替代逐列循环
 
     对应 risk_metrics.py:max_drawdown() 的面板级版本。
@@ -142,21 +147,22 @@ class MaxDrawdownFactor(BaseFactor):
             FactorOutput，values 为浮点矩阵（负数），kind="score"
         """
 
-        def _rolling_max_dd(series: pd.Series) -> pd.Series:
+        def _rolling_max_dd(series: pd.Series, lookback: int) -> pd.Series:
             """
             对单只基金计算滚动最大回撤。
 
-            O(n²) 朴素实现：对每个位置 i，取前 i+1 天的数据计算历史最大回撤。
-            为什么不用更高效的算法？因为 pandas 没有内置的 expanding().cummax()，
-            且 rolling apply 不支持有状态的 cummax。先保证正确性，性能后续优化。
+            O(n×lookback) 实现：对每个位置 i，取最近 lookback 天的窗口计算最大回撤。
+            先保证正确性，性能后续可用 numba 优化。
             """
             result = pd.Series(index=series.index, dtype=float)
             for i in range(len(series)):
-                if i < 2:
-                    # 前 2 天无法计算有意义的回撤（至少需要 2 个价格点）
+                if i < 1:
+                    # 至少需要 2 个价格点才能计算回撤
                     result.iloc[i] = np.nan
                     continue
-                window = series.iloc[: i + 1]
+                # 真正的 rolling window：只取最近 lookback 天
+                start = max(0, i - lookback + 1)
+                window = series.iloc[start : i + 1]
                 cummax = window.cummax()
                 # 防御：cummax 中任何值为 0 会导致除零
                 cummax_safe = cummax.replace(0, np.nan)
@@ -166,7 +172,9 @@ class MaxDrawdownFactor(BaseFactor):
 
         # 对每列（每只基金）应用滚动最大回撤计算
         # apply(axis=0) 按列遍历，每列是一个基金的净值序列
-        dd_df = nav_panel.apply(_rolling_max_dd, axis=0)
+        dd_df = nav_panel.apply(
+            lambda col: _rolling_max_dd(col, self.lookback), axis=0
+        )
 
         return FactorOutput(
             values=dd_df,

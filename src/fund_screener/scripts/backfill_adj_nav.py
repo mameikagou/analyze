@@ -35,8 +35,10 @@ from pathlib import Path
 
 import pandas as pd
 
+from fund_screener.cache import FileCache
 from fund_screener.config import load_config
 from fund_screener.fetchers.cn_composite import CompositeCNFetcher
+from fund_screener.fetchers.providers import AkshareCNProvider, TushareCNProvider
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +112,7 @@ def backfill_fund(
     - 失败：rollback（不污染数据库状态）
     """
     try:
-        nav_df = fetcher.fetch_nav_history(code, lookback_days=9999)
+        nav_df = fetcher.fetch_nav_history(code, days=9999)
         if nav_df is None or nav_df.empty:
             print(f"  跳过 {code}: 无数据")
             return 0
@@ -163,7 +165,26 @@ def backfill_adj_nav(db_path: str, batch_size: int = 50) -> None:
     print(f"数据库: {db_path}")
 
     config = load_config()
-    fetcher = CompositeCNFetcher(config)
+    # 正确构造 CompositeCNFetcher（与 CLI 中 _build_cn_fetcher 保持一致）
+    cache = FileCache()
+    providers = {
+        "akshare": AkshareCNProvider(
+            cache=cache,
+            rate_limit_config=config.rate_limit,
+            cn_config=config.cn_fund,
+        ),
+        "tushare": TushareCNProvider(
+            cache=cache,
+            rate_limit_config=config.rate_limit,
+            cn_config=config.cn_fund,
+        ),
+    }
+    fetcher = CompositeCNFetcher(
+        cache=cache,
+        rate_limit_config=config.rate_limit,
+        cn_config=config.cn_fund,
+        providers=providers,
+    )
 
     completed = 0
     skipped = 0

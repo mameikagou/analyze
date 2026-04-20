@@ -56,14 +56,9 @@ class CompositeFactor(BaseFactor):
             AssertionError: 如果有因子的 kind 不是 "score"
             ValueError: 如果 weights 长度和 factors 不一致
         """
-        # 防御：只有 score 因子可以组合
-        # signal 因子输出布尔值，Z-Score 标准化无意义
-        # weight 因子预留，Phase 3 暂不支持
-        for f in factors:
-            # 注意：这里不能直接用 f.kind，因为 kind 是 FactorOutput 的属性，不是 BaseFactor 的
-            # 我们通过检查因子类名或让用户保证。实际上设计文档里写的是 assert all(f.kind == "score")，
-            # 但 kind 不是 BaseFactor 的属性。这里改为在 compute 时检查每个因子的输出 kind。
-            pass
+        # 防御：因子列表不能为空（否则 weights = [1.0/0] 会触发 ZeroDivisionError）
+        if not factors:
+            raise ValueError("factors 不能为空列表")
 
         self.factors = factors
         self.weights = weights or [1.0 / len(factors)] * len(factors)

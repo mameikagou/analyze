@@ -802,6 +802,10 @@ class DataStore:
             无数据时返回空 DataFrame（不抛异常）
         """
         nav_col = "adj_nav" if use_adj_nav else "nav"
+        # 白名单校验：列名必须是受控字面量，防止 future 外部注入
+        _ALLOWED_NAV_COLS = {"nav", "adj_nav"}
+        if nav_col not in _ALLOWED_NAV_COLS:
+            raise ValueError(f"Invalid nav_col: {nav_col}")
 
         # f-string 仅用于列名选择（"nav" 或 "adj_nav"，受控字面量，非用户输入）
         # 实际参数用 ? 占位符防 SQL 注入

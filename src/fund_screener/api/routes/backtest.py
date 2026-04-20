@@ -130,12 +130,30 @@ async def run_backtest(
 
     # 1b. Apply score_weights override if provided
     if req.score_weights is not None and req.score_factor == "three_factor":
-        # Rebuild CompositeFactor with custom weights
+        # 校验 score_weights：只允许合法键、非负值、和为 1.0
+        _VALID_KEYS = {"momentum", "sharpe", "drawdown"}
+        invalid_keys = set(req.score_weights.keys()) - _VALID_KEYS
+        if invalid_keys:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid score_weights keys: {invalid_keys}",
+            )
         weights_list = [
             req.score_weights.get("momentum", 0.4),
             req.score_weights.get("sharpe", 0.25),
             req.score_weights.get("drawdown", 0.35),
         ]
+        if any(w < 0 for w in weights_list):
+            raise HTTPException(
+                status_code=400,
+                detail="score_weights must be non-negative",
+            )
+        total = sum(weights_list)
+        if abs(total - 1.0) > 1e-6:
+            raise HTTPException(
+                status_code=400,
+                detail=f"score_weights must sum to 1.0, got {total}",
+            )
         score_factor = CompositeFactor(
             factors=[MomentumFactor(), SharpeFactor(), MaxDrawdownFactor()],
             weights=weights_list,

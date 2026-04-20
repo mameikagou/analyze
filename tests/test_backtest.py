@@ -700,6 +700,87 @@ class TestEndToEnd:
             # 这里只验证日期格式正确
             assert len(date_str) == 10
 
+    def test_top_n_greater_than_candidates(self) -> None:
+        """top_n 大于有效候选数时，只选有效候选，等权分配。"""
+        dates = pd.date_range("2024-01-01", periods=60, freq="D")
+        # 3 只基金，其中 1 只被 signal 过滤掉
+        nav_panel = pd.DataFrame(
+            {
+                "FUND_A": np.linspace(1.0, 1.3, 60),
+                "FUND_B": np.linspace(1.3, 1.0, 60),
+                "FUND_C": np.linspace(1.0, 1.5, 60),
+            },
+            index=dates,
+        )
+
+        # 用 MA 过滤：FUND_B 下跌趋势会被过滤掉
+        ma_filter = MACrossFactor(short=5, long=10)
+        config = BacktestConfig(
+            top_n=10,  # 大于实际候选数
+            rebalance_freq="ME",
+            weighting="equal",
+            signal_filter=ma_filter,
+        )
+        engine = BacktestEngine(nav_panel, config)
+
+        score_factor = MomentumFactor(ma_period=20)
+        result = engine.run(score_factor)
+
+        # 验证权重和为 1.0
+        weights = result.target_weights
+        rebalance_dates = weights.dropna(how="all").index
+        for dt in rebalance_dates:
+            row = weights.loc[dt].fillna(0)
+            assert abs(row.sum() - 1.0) < 1e-9, f"{dt}: 权重和 {row.sum()} != 1.0"
+
+    def test_signal_filter_wrong_kind_raises(self) -> None:
+        """signal_filter 传入 kind='score' 的因子应抛 ValueError。"""
+        dates = pd.date_range("2024-01-01", periods=30, freq="D")
+        nav_panel = pd.DataFrame(
+            {"FUND_A": np.linspace(1.0, 1.3, 30)},
+            index=dates,
+        )
+
+        # MomentumFactor 是 kind='score'，不能用作 signal_filter
+        bad_filter = MomentumFactor(ma_period=5)
+        config = BacktestConfig(
+            top_n=1,
+            rebalance_freq="ME",
+            signal_filter=bad_filter,
+        )
+        engine = BacktestEngine(nav_panel, config)
+
+        with pytest.raises(ValueError, match="signal_filter 必须是 kind='signal'"):
+            engine.run(bad_filter)
+
+    def test_nav_panel_with_nan(self) -> None:
+        """nav_panel 含 NaN（模拟停牌），回测应正确处理。"""
+        dates = pd.date_range("2024-01-01", periods=60, freq="D")
+        nav_panel = pd.DataFrame(
+            {
+                "FUND_A": np.linspace(1.0, 1.3, 60),
+                "FUND_B": np.linspace(1.3, 1.0, 60),
+            },
+            index=dates,
+        )
+        # 模拟 FUND_B 在第 30~35 天停牌
+        nav_panel.iloc[30:36, 1] = np.nan
+
+        config = BacktestConfig(
+            top_n=2,
+            rebalance_freq="ME",
+            weighting="equal",
+        )
+        engine = BacktestEngine(nav_panel, config)
+
+        score_factor = MomentumFactor(ma_period=20)
+        result = engine.run(score_factor)
+
+        # 回测应正常完成，不 crash
+        assert isinstance(result, BacktestResult)
+        equity = result.equity_curve()
+        assert len(equity) == len(nav_panel)
+
 
 # ---------------------------------------------------------------------------
 # 导入测试

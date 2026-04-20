@@ -59,7 +59,7 @@ export interface BacktestRequest {
 
 /* ── Hook ──────────────────────────────────────────────── */
 
-async function runBacktest(request: BacktestRequest): Promise<BacktestResponse> {
+async function runBacktest(request: BacktestRequest): Promise<BacktestResult> {
   // Map camelCase frontend types to snake_case API body
   const body = {
     score_factor: request.scoreFactor,
@@ -73,7 +73,11 @@ async function runBacktest(request: BacktestRequest): Promise<BacktestResponse> 
     end_date: request.endDate,
     market: request.market,
   }
-  return apiPost<BacktestResponse>('/api/backtest/run', body)
+  const res = await apiPost<BacktestResponse>('/api/backtest/run', body)
+  if (!res.success || !res.data) {
+    throw new Error(res.error || '回测失败')
+  }
+  return res.data
 }
 
 export function useBacktest() {

@@ -1089,6 +1089,7 @@ def cmd_score(
 @click.option("--top-n", default=10, help="持仓数量")
 @click.option("--rebalance", default="ME", help="调仓频率")
 @click.option("--fee-rate", default=0.0015, help="申购费率")
+@click.option("--weighting", default="equal", help="权重分配: equal|score")
 @click.option("--output", help="输出文件路径（默认 stdout）")
 @click.pass_context
 def cmd_backtest(
@@ -1101,6 +1102,7 @@ def cmd_backtest(
     top_n: int,
     rebalance: str,
     fee_rate: float,
+    weighting: str,
     output: str | None,
 ) -> None:
     """执行回测并输出报告。
@@ -1162,7 +1164,7 @@ def cmd_backtest(
     bt_config = BacktestConfig(
         top_n=top_n,
         rebalance_freq=rebalance,
-        weighting="equal",
+        weighting=weighting,  # type: ignore[arg-type]
         fee_rate=fee_rate,
         signal_filter=signal_filter,
     )
