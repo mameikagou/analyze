@@ -1,7 +1,7 @@
 import { Outlet, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { Link } from '@tanstack/react-router'
-import { LayoutDashboard, ListFilter, BarChart3, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, ListFilter, BarChart3, MessageSquare, LineChart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
 
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/', label: '仪表盘', icon: LayoutDashboard },
   { to: '/funds', label: '基金列表', icon: ListFilter },
   { to: '/screening', label: '筛选结果', icon: BarChart3 },
+  { to: '/backtest', label: '策略回测', icon: LineChart },
   { to: '/chat', label: 'AI 分析', icon: MessageSquare },
 ]
 
