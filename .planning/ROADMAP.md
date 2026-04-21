@@ -92,14 +92,45 @@
 **UI hint:** no — 纯后端，回测结果未来可在前端 Phase 展示
 
 **Plans:**
-- [ ] `03-01-PLAN.md` — 因子层 (factors/base.py + technical.py + quant.py + composite.py) + storage.load_nav_panel() + 单元测试
-- [ ] `03-02-PLAN.md` — 回测引擎核心 (backtest/config.py + engine.py + result.py) + vectorbt 集成 + 单元测试
-- [ ] `03-03-PLAN.md` — API 层 (api/routes/backtest.py) + CLI 子命令 (cli.py backtest) + adj_nav 回填脚本 (scripts/backfill_adj_nav.py)
-- [ ] `03-04-PLAN.md` — 前端回测页 (web/src/routes/backtest/index.tsx + useBacktest hook + 导航更新)
+- [x] `03-01-PLAN.md` — 因子层 (factors/base.py + technical.py + quant.py + composite.py) + storage.load_nav_panel() + 单元测试
+- [x] `03-02-PLAN.md` — 回测引擎核心 (backtest/config.py + engine.py + result.py) + vectorbt 集成 + 单元测试
+- [x] `03-03-PLAN.md` — API 层 (api/routes/backtest.py) + CLI 子命令 (cli.py backtest) + adj_nav 回填脚本 (scripts/backfill_adj_nav.py)
+- [x] `03-04-PLAN.md` — 前端回测页 (web/src/routes/backtest/index.tsx + useBacktest hook + 导航更新)
+
+**Status:** ✅ COMPLETE — 58/58 tests pass, all 4 waves delivered
 
 ---
 
-## Phase 4: 定时任务 + 自动化
+## Phase 4: 前端设计升级（UI Renovation）
+
+**Goal:** 修复 Token 冲突，统一暗色模式，翻新回测页，提升全局视觉体验。
+
+**Depends on:** Phase 2（前端框架）+ Phase 3（回测页已就绪）
+
+**Key Decisions:**
+- 图表方案：回测页用 LightweightChart（交互图表），其他简单图表保留 Canvas
+- 动画库：引入 Framer Motion（页面过渡 + 交互动画）
+- 翻新顺序：从回测页开始（最不满意）→ 筛选页 → 基金详情 → 基金列表 → 首页 → 聊天页
+
+**Success Criteria:**
+1. Token 体系统一：shadcn HSL 和 Stone hex Token 不再打架，暗色模式一键切换
+2. 动画体系：页面切换淡入淡出，hover 统一过渡，loading 状态一致
+3. 回测页翻新：LightweightChart 净值曲线 + 交互式配置向导 + 增强 StatsCard（sparkline）
+4. 组件层统一：消除硬编码颜色（bg-white / bg-gray-*），全部走 Semantic Token
+5. 全局体验：Error Boundary、Toast 统一、移动端适配、reduced-motion 支持
+
+**Requirements mapped:** DSGN-01 ~ DSGN-08, FRONT-01 ~ FRONT-06, BACK-03
+
+**UI hint:** yes — 强 UI，核心目标
+
+**Plans:**
+- [ ] `04-01-PLAN.md` — Wave 1+2：Token 修复 + 暗色模式 + 动画体系
+- [ ] `04-02-PLAN.md` — Wave 3+4：组件层统一 + 回测页翻新
+- [ ] `04-03-PLAN.md` — Wave 5：全局体验优化（Error Boundary + 移动端 + Toast）
+
+---
+
+## Phase 5: 定时任务 + 自动化
 
 **Goal:** 每日自动跑筛选，自动生成报告。
 
@@ -119,11 +150,11 @@
 
 ---
 
-## Phase 5: 回测结果前端展示（可选，v1.1 或 v1.0 收尾）
+## Phase 6: 回测结果前端展示（可选，v1.1 或 v1.0 收尾）
 
 **Goal:** 在前端展示回测结果和自动化任务状态。
 
-**Depends on:** Phase 2（前端框架）+ Phase 3（回测有数据）+ Phase 4（自动化有日志）
+**Depends on:** Phase 2（前端框架）+ Phase 3（回测有数据）+ Phase 5（自动化有日志）
 
 **Success Criteria:**
 1. 回测结果页：收益曲线、回撤图、关键指标卡片
@@ -147,10 +178,13 @@ Phase 1 (后端 API) ───┬──► Phase 2 (前端仪表盘) ──┘
         │             └──► Phase 3 (回测引擎)
         │                      │
         │                      ▼
-        │             Phase 4 (定时任务)
+        │             Phase 4 (UI 设计升级)
         │                      │
         │                      ▼
-        │             Phase 5 (回测展示)
+        │             Phase 5 (定时任务)
+        │                      │
+        │                      ▼
+        │             Phase 6 (回测展示)
         │
         └── 可与 Phase 0 并行推进
 ```
@@ -159,13 +193,12 @@ Phase 1 (后端 API) ───┬──► Phase 2 (前端仪表盘) ──┘
 
 ## Execution Strategy
 
-由于 Phase 0 依赖主人的设计考古（异步进行），建议执行顺序：
-
 1. **立即开始：** Phase 1（后端 API）+ 主人并行做设计考古
 2. **设计考古完成后：** Phase 0（设计系统）→ 然后 Phase 2（前端仪表盘）
 3. **Phase 1 完成后：** Phase 3（回测引擎）可与 Phase 0/2 并行
-4. **Phase 3 完成后：** Phase 4（定时任务）
-5. **收尾：** Phase 5（回测展示）
+4. **Phase 3 完成后：** Phase 4（UI 设计升级）
+5. **Phase 4 完成后：** Phase 5（定时任务）
+6. **收尾：** Phase 6（回测展示）
 
 ---
 
@@ -175,10 +208,11 @@ Phase 1 (后端 API) ───┬──► Phase 2 (前端仪表盘) ──┘
 |-------|--------|-------|-----------|-----|
 | 0 | ✅ DELIVERED | 1 | 1 | — |
 | 1 | ✅ COMPLETE | 1 | 1 | — |
-| 2 | 🚧 IN PROGRESS | 0 | 0 | — |
-| 3 | 📐 PLANNED | 4 | 0 | — |
-| 4 | ⏳ PENDING | 0 | 0 | — |
+| 2 | ✅ COMPLETE | 0 | 0 | — |
+| 3 | ✅ COMPLETE | 4 | 4 | — |
+| 4 | 📐 PLANNED | 0 | 0 | — |
 | 5 | ⏳ PENDING | 0 | 0 | — |
+| 6 | ⏳ PENDING | 0 | 0 | — |
 
 ---
 *Last updated: 2026-04-20 after Phase 3 planning*
