@@ -10,10 +10,12 @@
  *   - 图表数据 → ChartContainer
  */
 
+import { useEffect } from 'react'
 import { useParams, Link } from '@tanstack/react-router'
 import { createFileRoute } from '@tanstack/react-router'
 import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react'
 import { useFundDetail, useChartData } from '@/hooks/api'
+import { useToast } from '@/hooks/useToast'
 import { FundDetailHeader } from '@/components/views/FundDetailHeader'
 import { ChartContainer } from '@/components/views/ChartContainer'
 import { HoldingsList } from '@/components/views/HoldingsList'
@@ -26,8 +28,16 @@ function FundDetailPage() {
   const { code } = useParams({ from: '/funds/$code' })
   const { data: fund, isLoading: detailLoading, error: detailError } = useFundDetail(code)
   const { data: chartResponse, isLoading: chartLoading } = useChartData(code, { days: 180 })
+  const { toast } = useToast()
 
   const isLoading = detailLoading || chartLoading
+
+  // API 错误通过 Toast 通知
+  useEffect(() => {
+    if (detailError) {
+      toast({ type: 'error', message: `加载基金数据失败: ${detailError.message}` })
+    }
+  }, [detailError, toast])
 
   /* ── 加载中 ────────────────────────────────────────────── */
   if (isLoading) {
@@ -39,14 +49,12 @@ function FundDetailPage() {
     )
   }
 
-  /* ── 错误 ──────────────────────────────────────────────── */
-  if (detailError || !fund) {
+  /* ── 基金不存在 ────────────────────────────────────────── */
+  if (!fund) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <AlertCircle className="h-8 w-8 text-[var(--red-600)]" />
-        <p className="text-sm text-[var(--text-muted)]">
-          {detailError ? '加载失败，请稍后重试' : '基金不存在'}
-        </p>
+        <AlertCircle className="h-8 w-8 text-[var(--accent-error)]" />
+        <p className="text-sm text-[var(--text-muted)]">基金不存在</p>
         <BackLink />
       </div>
     )

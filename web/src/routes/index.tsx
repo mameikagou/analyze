@@ -12,9 +12,11 @@
  *   - 潜在副作用：首次加载时会有短暂的 loading 状态（API 请求）。
  */
 
+import { useEffect } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Database, Filter, TrendingUp, Activity, Loader2 } from 'lucide-react'
 import { useStats, useScreening } from '@/hooks/api'
+import { useToast } from '@/hooks/useToast'
 import { StatsCard } from '@/components/views/StatsCard'
 import { ScreeningResultItem } from '@/components/views/ScreeningResultItem'
 
@@ -23,8 +25,19 @@ export const Route = createFileRoute('/')({
 })
 
 function DashboardPage() {
-  const { data: stats, isLoading: statsLoading } = useStats()
-  const { data: screeningData, isLoading: screeningLoading } = useScreening({ limit: 10 })
+  const { data: stats, isLoading: statsLoading, error: statsError } = useStats()
+  const { data: screeningData, isLoading: screeningLoading, error: screeningError } = useScreening({ limit: 10 })
+  const { toast } = useToast()
+
+  // API 错误通过 Toast 通知，页面继续渲染空数据
+  useEffect(() => {
+    if (statsError) {
+      toast({ type: 'error', message: `加载统计数据失败: ${statsError.message}` })
+    }
+    if (screeningError) {
+      toast({ type: 'error', message: `加载筛选数据失败: ${screeningError.message}` })
+    }
+  }, [statsError, screeningError, toast])
 
   const isLoading = statsLoading || screeningLoading
 

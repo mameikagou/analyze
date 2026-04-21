@@ -79,7 +79,7 @@ export function IconButton({
 
         /* Accent 变体：橙色 */
         variant === 'accent' && [
-          'bg-[var(--accent-primary)] text-white',
+          'bg-[var(--accent-primary)] text-[var(--text-inverse)]',
           !disabled && 'hover:bg-[var(--accent-primary-hover)]',
           active && 'opacity-90',
         ],

@@ -13,9 +13,11 @@
  *   - 潜在副作用：legacy hooks/useFunds.ts 不再被引用，后续可安全删除。
  */
 
+import { useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useFunds } from '@/hooks/api'
+import { useToast } from '@/hooks/useToast'
 import { FundTable } from '@/components/views/FundTable'
 
 export const Route = createFileRoute('/funds/')({
@@ -25,8 +27,16 @@ export const Route = createFileRoute('/funds/')({
 function FundsPage() {
   const navigate = useNavigate()
   const { data: response, isLoading, error } = useFunds({ page: 1, pageSize: 100 })
+  const { toast } = useToast()
 
   const funds = response?.data ?? []
+
+  // API 错误通过 Toast 通知，页面继续渲染空数据
+  useEffect(() => {
+    if (error) {
+      toast({ type: 'error', message: `加载基金列表失败: ${error.message}` })
+    }
+  }, [error, toast])
 
   /* ── 加载中 ────────────────────────────────────────────── */
   if (isLoading) {
@@ -34,16 +44,6 @@ function FundsPage() {
       <div className="flex flex-col items-center justify-center py-20 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
         <p className="text-sm text-[var(--text-muted)]">加载基金列表...</p>
-      </div>
-    )
-  }
-
-  /* ── 错误 ──────────────────────────────────────────────── */
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <AlertCircle className="h-8 w-8 text-[var(--red-600)]" />
-        <p className="text-sm text-[var(--text-muted)]">加载失败，请稍后重试</p>
       </div>
     )
   }

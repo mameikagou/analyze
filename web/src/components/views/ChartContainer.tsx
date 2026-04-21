@@ -82,7 +82,6 @@ export function ChartContainer({
       style.getPropertyValue(name).trim() || fallback
 
     const chartUp = readColor('--chart-up', '#22c55e')
-    const chartDown = readColor('--chart-down', '#ef4444')
     const chartGrid = readColor('--chart-grid', '#e7e5e4')
     const chartCrosshair = readColor('--chart-crosshair', '#78716c')
     const maShortColor = readColor('--chart-ma-short', '#f97316')

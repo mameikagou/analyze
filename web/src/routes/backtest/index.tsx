@@ -1,15 +1,43 @@
 /**
  * 回测页 — /backtest
  *
- * 职责：配置回测参数、执行回测、展示结果。
- * 零样式页面，所有样式在子组件和 Tailwind utility classes 中。
+ * 【2026-04-21 重构说明】
+ * 本次重构将原本 4 列网格表单改造为 4 步 Stepper 向导，降低用户认知负荷。
+ * 同时将 Canvas 自绘净值曲线替换为 LightweightChart AreaSeries，获得：
+ *   - 交互式缩放/平移
+ *   - 暗色模式自动适配
+ *   - 十字光标与 tooltip
+ *   - 不再需要手动处理 DPR 和 resize
+ *
+ * 副作用：
+ *   - 新增 framer-motion 依赖做步骤切换动画
+ *   - 新增 LightweightChart 依赖（已存在）
+ *   - 步骤间数据全部保存在组件 state，无持久化需求
  */
 
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useRef, useEffect } from 'react'
-import { Loader2, Play, TrendingUp, TrendingDown, Activity, BarChart3 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Loader2,
+  Play,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  BarChart3,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  SlidersHorizontal,
+  Wallet,
+  CalendarRange,
+  Rocket,
+} from 'lucide-react'
 import { useBacktest, type RebalanceEntry } from '@/hooks/api'
+import { useToast } from '@/hooks/useToast'
 import { StatsCard } from '@/components/views/StatsCard'
+import { LightweightChart } from '@/components/chart/LightweightChart'
+import { presence, transition } from '@/styles/tokens.animation'
 
 export const Route = createFileRoute('/backtest/')({
   component: BacktestPage,
@@ -39,8 +67,39 @@ const WEIGHTING_OPTIONS = [
   { value: 'score', label: '按分数加权' },
 ]
 
+const MARKET_OPTIONS = [
+  { value: 'cn', label: 'A股' },
+  { value: 'hk', label: '港股' },
+  { value: 'us', label: '美股' },
+]
+
+/* ── Stepper Steps Config ──────────────────────────────── */
+
+const STEPS = [
+  { id: 1, title: '策略选择', icon: SlidersHorizontal },
+  { id: 2, title: '持仓配置', icon: Wallet },
+  { id: 3, title: '费用与周期', icon: CalendarRange },
+  { id: 4, title: '确认运行', icon: Rocket },
+]
+
+/* ── Page Component ────────────────────────────────────── */
+
 function BacktestPage() {
   const { mutate: runBacktest, data: result, isPending, error } = useBacktest()
+  const { toast } = useToast()
+
+  // 回测错误通过 Toast 通知，替代内联红色 div
+  useEffect(() => {
+    if (error) {
+      toast({
+        type: 'error',
+        message: `回测失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      })
+    }
+  }, [error, toast])
+
+  // Stepper state
+  const [currentStep, setCurrentStep] = useState(1)
 
   // Form state
   const [scoreFactor, setScoreFactor] = useState('three_factor')
@@ -54,8 +113,31 @@ function BacktestPage() {
   const [market, setMarket] = useState('cn')
   const [dateError, setDateError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const canGoNext = () => {
+    if (currentStep === 3) {
+      if (startDate >= endDate) {
+        setDateError('开始日期必须早于结束日期')
+        return false
+      }
+      setDateError(null)
+    }
+    return true
+  }
+
+  const handleNext = () => {
+    if (canGoNext() && currentStep < 4) {
+      setCurrentStep((s) => s + 1)
+    }
+  }
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep((s) => s - 1)
+      setDateError(null)
+    }
+  }
+
+  const handleSubmit = () => {
     if (startDate >= endDate) {
       setDateError('开始日期必须早于结束日期')
       return
@@ -76,11 +158,22 @@ function BacktestPage() {
 
   const stats = result?.data?.stats
   const equityCurve = result?.data?.equityCurve
-  const drawdown = result?.data?.drawdown
   const rebalanceHistory = result?.data?.rebalanceHistory
 
+  const equityChartData = equityCurve
+    ? Object.entries(equityCurve)
+        .map(([time, value]) => ({ time, value }))
+        .sort((a, b) => a.time.localeCompare(b.time))
+    : []
+
+  const factorLabel = FACTOR_OPTIONS.find((o) => o.value === scoreFactor)?.label ?? scoreFactor
+  const signalLabel = SIGNAL_FILTER_OPTIONS.find((o) => o.value === signalFilter)?.label ?? '无过滤'
+  const rebalanceLabel = REBALANCE_OPTIONS.find((o) => o.value === rebalanceFreq)?.label ?? rebalanceFreq
+  const weightingLabel = WEIGHTING_OPTIONS.find((o) => o.value === weighting)?.label ?? weighting
+  const marketLabel = MARKET_OPTIONS.find((o) => o.value === market)?.label ?? market
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl">
       {/* Title */}
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
@@ -91,153 +184,292 @@ function BacktestPage() {
         </p>
       </div>
 
-      {/* Configuration Panel */}
-      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-          回测配置
-        </h3>
-        <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {/* Score Factor */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">打分因子</label>
-            <select
-              value={scoreFactor}
-              onChange={(e) => setScoreFactor(e.target.value)}
-              className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm"
-            >
-              {FACTOR_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
+      {/* Stepper Header */}
+      <div className="flex items-center gap-2">
+        {STEPS.map((step, idx) => {
+          const isActive = step.id === currentStep
+          const isCompleted = step.id < currentStep
+          const isLast = idx === STEPS.length - 1
 
-          {/* Signal Filter */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">信号过滤</label>
-            <select
-              value={signalFilter}
-              onChange={(e) => setSignalFilter(e.target.value)}
-              className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm"
-            >
-              {SIGNAL_FILTER_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Top N */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">持仓数量</label>
-            <input
-              type="number"
-              min={1}
-              max={50}
-              value={topN}
-              onChange={(e) => setTopN(Number(e.target.value))}
-              className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm"
-            />
-          </div>
-
-          {/* Rebalance Frequency */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">调仓频率</label>
-            <select
-              value={rebalanceFreq}
-              onChange={(e) => setRebalanceFreq(e.target.value)}
-              className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm"
-            >
-              {REBALANCE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Weighting */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">权重分配</label>
-            <select
-              value={weighting}
-              onChange={(e) => setWeighting(e.target.value)}
-              className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm"
-            >
-              {WEIGHTING_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Fee Rate */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">申购费率</label>
-            <input
-              type="number"
-              step={0.0001}
-              min={0}
-              max={0.1}
-              value={feeRate}
-              onChange={(e) => setFeeRate(Number(e.target.value))}
-              className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm"
-            />
-          </div>
-
-          {/* Start Date */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">开始日期</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm"
-            />
-          </div>
-
-          {/* End Date */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">结束日期</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm"
-            />
-          </div>
-
-          {/* Submit Button */}
-          <div className="md:col-span-2 lg:col-span-4">
-            <button
-              type="submit"
-              disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-md bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  回测运行中...
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  运行回测
-                </>
+          return (
+            <div key={step.id} className="flex items-center gap-2 flex-1">
+              <button
+                onClick={() => {
+                  if (step.id < currentStep) setCurrentStep(step.id)
+                }}
+                disabled={step.id >= currentStep}
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 ${
+                  isActive
+                    ? 'bg-[var(--accent-primary)] text-[var(--text-inverse)]'
+                    : isCompleted
+                      ? 'bg-[var(--accent-primary-subtle)] text-[var(--accent-primary)]'
+                      : 'bg-[var(--bg-surface)] text-[var(--text-muted)] border border-[var(--border-subtle)]'
+                } ${step.id < currentStep ? 'cursor-pointer' : 'cursor-default'}`}
+              >
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${
+                    isActive
+                      ? 'bg-[var(--highlight-on-accent)]'
+                      : isCompleted
+                        ? 'bg-[var(--accent-primary)] text-[var(--text-inverse)]'
+                        : 'bg-[var(--bg-hover)]'
+                  }`}
+                >
+                  {isCompleted ? <Check className="h-3 w-3" /> : step.id}
+                </span>
+                <span className="hidden sm:inline">{step.title}</span>
+              </button>
+              {!isLast && (
+                <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-faint)]" />
               )}
-            </button>
-          </div>
-        </form>
+            </div>
+          )
+        })}
       </div>
 
-      {/* Date validation error */}
-      {dateError && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {dateError}
-        </div>
-      )}
+      {/* Step Content */}
+      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={presence.slideUp.initial}
+            animate={presence.slideUp.animate}
+            exit={presence.slideUp.exit}
+            transition={transition.fade}
+          >
+            {/* Step 1: 策略选择 */}
+            {currentStep === 1 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                  选择打分因子与信号过滤
+                </h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[var(--text-muted)]">打分因子</label>
+                    <select
+                      value={scoreFactor}
+                      onChange={(e) => setScoreFactor(e.target.value)}
+                      className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]"
+                    >
+                      {FACTOR_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-[var(--text-faint)]">
+                      决定如何对基金进行评分排序
+                    </p>
+                  </div>
 
-      {/* API Error */}
-      {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          回测失败: {error instanceof Error ? error.message : '未知错误'}
-        </div>
-      )}
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[var(--text-muted)]">信号过滤</label>
+                    <select
+                      value={signalFilter}
+                      onChange={(e) => setSignalFilter(e.target.value)}
+                      className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]"
+                    >
+                      {SIGNAL_FILTER_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-[var(--text-faint)]">
+                      仅在满足技术信号时开仓
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: 持仓配置 */}
+            {currentStep === 2 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                  配置持仓与调仓规则
+                </h3>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[var(--text-muted)]">持仓数量</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={topN}
+                      onChange={(e) => setTopN(Number(e.target.value))}
+                      className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]"
+                    />
+                    <p className="text-xs text-[var(--text-faint)]">
+                      每次调仓后保留的前 N 只基金
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[var(--text-muted)]">调仓频率</label>
+                    <select
+                      value={rebalanceFreq}
+                      onChange={(e) => setRebalanceFreq(e.target.value)}
+                      className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]"
+                    >
+                      {REBALANCE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[var(--text-muted)]">权重分配</label>
+                    <select
+                      value={weighting}
+                      onChange={(e) => setWeighting(e.target.value)}
+                      className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]"
+                    >
+                      {WEIGHTING_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: 费用与周期 */}
+            {currentStep === 3 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                  设置费率与回测区间
+                </h3>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[var(--text-muted)]">申购费率</label>
+                    <input
+                      type="number"
+                      step={0.0001}
+                      min={0}
+                      max={0.1}
+                      value={feeRate}
+                      onChange={(e) => setFeeRate(Number(e.target.value))}
+                      className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]"
+                    />
+                    <p className="text-xs text-[var(--text-faint)]">
+                      每次调仓的单边费率
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[var(--text-muted)]">市场</label>
+                    <select
+                      value={market}
+                      onChange={(e) => setMarket(e.target.value)}
+                      className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]"
+                    >
+                      {MARKET_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[var(--text-muted)]">开始日期</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value)
+                        setDateError(null)
+                      }}
+                      className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[var(--text-muted)]">结束日期</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value)
+                        setDateError(null)
+                      }}
+                      className="w-full rounded-md border border-[var(--border-subtle)] bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]"
+                    />
+                  </div>
+                </div>
+
+                {dateError && (
+                  <div className="rounded-md border border-[var(--accent-error)]/20 bg-[var(--accent-error-subtle)] p-3 text-sm text-[var(--accent-error)]">
+                    {dateError}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 4: 确认运行 */}
+            {currentStep === 4 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                  确认配置并运行回测
+                </h3>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <SummaryItem label="打分因子" value={factorLabel} />
+                  <SummaryItem label="信号过滤" value={signalLabel} />
+                  <SummaryItem label="持仓数量" value={`${topN} 只`} />
+                  <SummaryItem label="调仓频率" value={rebalanceLabel} />
+                  <SummaryItem label="权重分配" value={weightingLabel} />
+                  <SummaryItem label="申购费率" value={`${(feeRate * 100).toFixed(2)}%`} />
+                  <SummaryItem label="回测市场" value={marketLabel} />
+                  <SummaryItem label="回测区间" value={`${startDate} ~ ${endDate}`} />
+                </div>
+
+                {dateError && (
+                  <div className="rounded-md border border-[var(--accent-error)]/20 bg-[var(--accent-error-subtle)] p-3 text-sm text-[var(--accent-error)]">
+                    {dateError}
+                  </div>
+                )}
+
+                <div className="pt-2">
+                  <button
+                    onClick={handleSubmit}
+                    disabled={isPending}
+                    className="inline-flex items-center gap-2 rounded-md bg-[var(--accent-primary)] px-6 py-2.5 text-sm font-medium text-[var(--text-inverse)] hover:opacity-90 disabled:opacity-50 transition-opacity duration-200"
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        回测运行中...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-4 w-4" />
+                        运行回测
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Navigation Buttons (for steps 1-3) */}
+        {currentStep < 4 && (
+          <div className="mt-6 flex items-center justify-between border-t border-[var(--border-subtle)] pt-4">
+            <button
+              onClick={handleBack}
+              disabled={currentStep === 1}
+              className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--bg-hover)] disabled:opacity-30 transition-colors duration-200"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              上一步
+            </button>
+            <button
+              onClick={handleNext}
+              className="inline-flex items-center gap-1 rounded-md bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-[var(--text-inverse)] hover:opacity-90 transition-opacity duration-200"
+            >
+              下一步
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Results */}
       {result && result.data && (
@@ -246,25 +478,25 @@ function BacktestPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatsCard
               title="总收益率"
-              value={`${stats?.totalReturn?.toFixed(2) ?? '—'}%`}
+              value={`${stats?.totalReturn != null ? stats.totalReturn.toFixed(2) : '—'}%`}
               trend={stats && stats.totalReturn > 0 ? 'up' : stats && stats.totalReturn < 0 ? 'down' : 'neutral'}
               icon={TrendingUp}
             />
             <StatsCard
               title="年化收益率"
-              value={`${stats?.annualReturn?.toFixed(2) ?? '—'}%`}
+              value={`${stats?.annualReturn != null ? stats.annualReturn.toFixed(2) : '—'}%`}
               trend={stats && stats.annualReturn > 0 ? 'up' : stats && stats.annualReturn < 0 ? 'down' : 'neutral'}
               icon={Activity}
             />
             <StatsCard
               title="最大回撤"
-              value={`${stats?.maxDrawdown?.toFixed(2) ?? '—'}%`}
+              value={`${stats?.maxDrawdown != null ? stats.maxDrawdown.toFixed(2) : '—'}%`}
               trend="down"
               icon={TrendingDown}
             />
             <StatsCard
               title="夏普比率"
-              value={stats?.sharpeRatio?.toFixed(2) ?? '—'}
+              value={stats?.sharpeRatio != null ? stats.sharpeRatio.toFixed(2) : '—'}
               icon={BarChart3}
             />
           </div>
@@ -274,8 +506,12 @@ function BacktestPage() {
             <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
               净值曲线
             </h3>
-            {equityCurve && Object.keys(equityCurve).length > 0 ? (
-              <EquityCurveChart data={equityCurve} drawdown={drawdown} />
+            {equityChartData.length > 0 ? (
+              <LightweightChart
+                data={equityChartData}
+                type="area"
+                height={320}
+              />
             ) : (
               <p className="text-sm text-[var(--text-muted)]">无净值数据</p>
             )}
@@ -300,119 +536,11 @@ function BacktestPage() {
 
 /* ── Sub-components ────────────────────────────────────── */
 
-function EquityCurveChart({
-  data,
-  drawdown,
-}: {
-  data: Record<string, number>
-  drawdown?: Record<string, number> | null
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    const container = containerRef.current
-    if (!canvas || !container) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    const dates = Object.keys(data).sort()
-    const values = dates.map((d) => data[d])
-    const ddValues = drawdown ? dates.map((d) => drawdown[d] ?? 0) : null
-
-    // 防御：数据点不足时不绘制
-    if (dates.length < 2) return
-
-    // 处理 devicePixelRatio：让 Canvas 在 Retina 屏上不模糊
-    const dpr = window.devicePixelRatio || 1
-    const cssWidth = container.clientWidth
-    const cssHeight = 300
-    canvas.width = cssWidth * dpr
-    canvas.height = cssHeight * dpr
-    canvas.style.width = `${cssWidth}px`
-    canvas.style.height = `${cssHeight}px`
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-
-    const width = cssWidth
-    const height = cssHeight
-    const padding = { top: 20, right: 20, bottom: 30, left: 60 }
-
-    const chartW = width - padding.left - padding.right
-    const chartH = height - padding.top - padding.bottom
-
-    const minVal = Math.min(...values)
-    const maxVal = Math.max(...values)
-    const valRange = maxVal - minVal || 1
-
-    // Clear
-    ctx.clearRect(0, 0, width, height)
-
-    // Grid lines
-    ctx.strokeStyle = 'var(--border-subtle)'
-    ctx.lineWidth = 0.5
-    for (let i = 0; i <= 4; i++) {
-      const y = padding.top + (chartH * i) / 4
-      ctx.beginPath()
-      ctx.moveTo(padding.left, y)
-      ctx.lineTo(width - padding.right, y)
-      ctx.stroke()
-
-      // Y-axis labels
-      const labelVal = maxVal - (valRange * i) / 4
-      ctx.fillStyle = 'var(--text-muted)'
-      ctx.font = '10px sans-serif'
-      ctx.textAlign = 'right'
-      ctx.fillText(labelVal.toFixed(0), padding.left - 8, y + 3)
-    }
-
-    // Equity curve line
-    ctx.strokeStyle = 'var(--accent-primary)'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    const xStep = chartW / (dates.length - 1)
-    dates.forEach((_date, i) => {
-      const x = padding.left + i * xStep
-      const y = padding.top + chartH * (1 - (values[i] - minVal) / valRange)
-      if (i === 0) ctx.moveTo(x, y)
-      else ctx.lineTo(x, y)
-    })
-    ctx.stroke()
-
-    // Drawdown area (if available)
-    if (ddValues) {
-      const ddMin = Math.min(...ddValues)
-      const ddMax = Math.max(...ddValues)
-      const ddRange = ddMax - ddMin || 1
-
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.15)'
-      ctx.beginPath()
-      dates.forEach((_date, i) => {
-        const x = padding.left + i * xStep
-        const y = padding.top + chartH * (1 - (ddValues[i] - ddMin) / ddRange)
-        if (i === 0) ctx.moveTo(x, y)
-        else ctx.lineTo(x, y)
-      })
-      ctx.lineTo(padding.left + chartW, padding.top + chartH)
-      ctx.lineTo(padding.left, padding.top + chartH)
-      ctx.closePath()
-      ctx.fill()
-    }
-
-    // X-axis labels (first, middle, last)
-    ctx.fillStyle = 'var(--text-muted)'
-    ctx.font = '10px sans-serif'
-    ctx.textAlign = 'center'
-    const labelIndices = [0, Math.floor(dates.length / 2), dates.length - 1]
-    labelIndices.forEach((i) => {
-      const x = padding.left + i * xStep
-      ctx.fillText(dates[i].slice(0, 7), x, height - 8)
-    })
-  }, [data, drawdown])
-
+function SummaryItem({ label, value }: { label: string; value: string }) {
   return (
-    <div ref={containerRef} className="w-full">
-      <canvas ref={canvasRef} className="w-full" />
+    <div className="flex items-center justify-between rounded-md bg-[var(--bg-hover)] px-3 py-2">
+      <span className="text-xs text-[var(--text-muted)]">{label}</span>
+      <span className="text-sm font-medium text-[var(--text-primary)]">{value}</span>
     </div>
   )
 }
@@ -435,9 +563,10 @@ function RebalanceTable({ data }: { data: RebalanceEntry[] }) {
             const holdings = Object.entries(entry.holdings)
             const isExpanded = expandedRow === idx
             return (
-              <React.Fragment key={`${entry.date}-${idx}`}>
+              <>
                 <tr
-                  className="border-b border-[var(--border-subtle)] cursor-pointer hover:bg-[var(--bg-hover)]"
+                  key={`row-${entry.date}-${idx}`}
+                  className="border-b border-[var(--border-subtle)] cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-200"
                   onClick={() => setExpandedRow(isExpanded ? null : idx)}
                 >
                   <td className="px-3 py-2 text-[var(--text-primary)]">{entry.date}</td>
@@ -447,7 +576,7 @@ function RebalanceTable({ data }: { data: RebalanceEntry[] }) {
                   </td>
                 </tr>
                 {isExpanded && (
-                  <tr>
+                  <tr key={`expand-${entry.date}-${idx}`}>
                     <td colSpan={3} className="px-3 py-2">
                       <div className="grid gap-1 md:grid-cols-2 lg:grid-cols-4">
                         {holdings.map(([code, weight]) => (
@@ -465,7 +594,7 @@ function RebalanceTable({ data }: { data: RebalanceEntry[] }) {
                     </td>
                   </tr>
                 )}
-              </React.Fragment>
+              </>
             )
           })}
         </tbody>

@@ -58,6 +58,9 @@
   /* 遮罩 */
   --overlay-backdrop: rgba(0, 0, 0, 0.25);
 
+  /* 强调背景上的高亮（如 stepper 激活态圆圈） */
+  --highlight-on-accent: rgba(255, 255, 255, 0.2);
+
   /* 滚动条 */
   --scrollbar-track: transparent;
   --scrollbar-thumb: var(--stone-300);

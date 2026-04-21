@@ -10,7 +10,7 @@
  */
 
 import { motion } from 'framer-motion'
-import { stagger, presence, transition } from '@/styles/tokens.animation'
+import { presence, transition } from '@/styles/tokens.animation'
 import type { Holding } from '@/hooks/api'
 
 interface HoldingsListProps {

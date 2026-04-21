@@ -39,6 +39,11 @@
   /* ── 成交量 ─────────────────────────────────────────── */
   --chart-volume-up:   var(--green-500);
   --chart-volume-down: var(--red-500);
+
+  /* ── 面积图（净值曲线）──────────────────────────────── */
+  --chart-line-color:      var(--accent-primary);
+  --chart-area-top-color:  var(--accent-primary);
+  --chart-area-bottom-color: transparent;
 }
 
 /* ── A股/中国市场：红涨绿跌 ───────────────────────────── */

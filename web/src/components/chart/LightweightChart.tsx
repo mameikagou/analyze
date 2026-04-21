@@ -3,16 +3,18 @@ import {
   createChart,
   LineSeries,
   CandlestickSeries,
+  AreaSeries,
   type IChartApi,
   type ISeriesApi,
   type LineData,
   type CandlestickData,
+  type AreaData,
   type Time,
   LineStyle,
   CrosshairMode,
 } from 'lightweight-charts'
 
-export type ChartType = 'line' | 'candlestick'
+export type ChartType = 'line' | 'candlestick' | 'area'
 
 export interface ChartDataPoint {
   time: string // 'YYYY-MM-DD'
@@ -35,6 +37,7 @@ interface LightweightChartProps {
  *
  * 样式全部从 CSS 变量读取（tokens.chart.css），禁止硬编码 HEX。
  * Market-aware 涨跌色通过父容器的 data-market="cn" 自动切换。
+ * 支持三种图表类型：line、candlestick、area。
  *
  * 注意：组件卸载时必须调用 chart.remove() 释放 canvas 和事件监听器，
  * 否则会造成内存泄漏（TV 图表在 DOM 之外保留了大量状态）。
@@ -47,7 +50,12 @@ export function LightweightChart({
 }: LightweightChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
-  const seriesRef = useRef<ISeriesApi<'Line'> | ISeriesApi<'Candlestick'> | null>(null)
+  const seriesRef = useRef<
+    | ISeriesApi<'Line'>
+    | ISeriesApi<'Candlestick'>
+    | ISeriesApi<'Area'>
+    | null
+  >(null)
 
   useEffect(() => {
     const container = containerRef.current
@@ -112,6 +120,24 @@ export function LightweightChart({
       )
       candleSeries.setData(cd)
       seriesRef.current = candleSeries
+    } else if (type === 'area') {
+      const lineColor = style.getPropertyValue('--chart-line-color').trim() || '#f97316'
+      const topColor = style.getPropertyValue('--chart-area-top-color').trim() || '#f97316'
+      const areaSeries = chart.addSeries(AreaSeries, {
+        lineColor,
+        topColor: topColor + '40', /* 25% opacity */
+        bottomColor: style.getPropertyValue('--chart-area-bottom-color').trim() || `${lineColor}00`,
+        lineWidth: 2,
+        lineStyle: LineStyle.Solid,
+      })
+      const ad = data.map(
+        (d): AreaData<Time> => ({
+          time: d.time,
+          value: d.value,
+        })
+      )
+      areaSeries.setData(ad)
+      seriesRef.current = areaSeries
     } else {
       const lineSeries = chart.addSeries(LineSeries, {
         color: style.getPropertyValue('--chart-ma-short').trim() || '#f97316',
