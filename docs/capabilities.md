@@ -676,7 +676,106 @@ A, B = 两只基金的行业权重向量
 
 ---
 
-## 四、技术栈
+### 3.8 前端现状详细分析
+
+以上 3.1~3.7 是"有什么"，这一节是"有什么问题"。
+
+#### 3.8.1 设计系统 — 半成品状态
+
+**Token 层**: 只有颜色变量（--text-primary, --accent-primary 等），缺少：
+- 暗色模式 token（当前只有一套亮色）
+- 字号阶梯（没有 xs/sm/base/lg/xl/2xl/3xl 的定义）
+- 间距阶梯（Tailwind 默认 spacing 在用，但没有项目级自定义）
+- 圆角阶梯（没有 sm/md/lg/xl 的语义定义）
+- shadow 阶梯（只有 border-subtle，没有阴影层级）
+
+**Animation Token**: `tokens.animation.ts` 只有 presence variants（组件挂载/卸载时的 enter/exit），缺少：
+- hover/focus/loading 状态动画
+- `prefers-reduced-motion` 全局降级
+- 页面切换过渡（TanStack Router outlet 动画）
+
+**CVA Variants**: 只有 4 个（MarketBadge/ScoreBadge/PurchaseStatusBadge/MADiffIndicator），shadcn/ui 组件（Button/Card/Badge 等）没有统一 variant 系统，样式散落在各组件里。
+
+#### 3.8.2 业务组件 — 功能覆盖但细节粗糙
+
+| 组件 | 当前问题 |
+|------|----------|
+| `StatsCard` | 只有 1 种尺寸，缺少 compact/large 变体；趋势颜色硬编码 |
+| `ScreeningResultItem` | 信息密度过高，移动端未适配 |
+| `FundTable` | 纯数据展示，缺少排序/过滤交互 |
+| `FundDetailHeader` | 信息网格布局固定，响应式 breakpoints 过少 |
+| `HoldingsList` | 权重用进度条展示，但缺少 tooltip |
+| `ChartContainer` | MA 计算在前端重复（后端筛选时已算过），数据冗余 |
+| 各类 Badge | 尺寸固定，缺少 size variant |
+
+#### 3.8.3 回测页 — MVP 级别
+
+**配置面板**: 8 个表单字段平铺在一页，无步骤引导。混用原生 `<input>` 和 shadcn Input，表单体验不一致。
+
+**结果展示**: 4 张 StatsCard + Canvas 单线图 + 调仓历史表。Canvas 图表功能极简（单线+填充），无 zoom/pan/tooltip，无法做多策略对比。
+
+#### 3.8.4 图表系统 — 两套并存，风格不统一
+
+| 页面 | 库 | 风格 |
+|------|-----|------|
+| 基金详情 | TV Lightweight Charts | 有自己的主题系统、颜色、字体 |
+| 回测结果 | Canvas（手写） | 用 CSS 变量画线、10px sans-serif 标签 |
+
+两套图表视觉风格不一致。TV Charts 功能完整但重，Canvas 轻量但功能弱。
+
+#### 3.8.5 状态管理 — 几乎空置
+
+Zustand store 只有 `sidebarOpen` 一个状态。页面间数据不共享（每次切路由重新请求）。没有 optimistic updates、没有本地缓存策略、没有全局 loading/error 状态。
+
+#### 3.8.6 全局体验缺口
+
+- **页面切换**: 无过渡动画，路由跳转是瞬间白屏/闪切
+- **Loading 状态**: 混用骨架屏（详情页）和 spinner（回测页），无统一规范
+- **错误处理**: 只有 hook error 的红色提示框，无 Error Boundary
+- **移动端**: 表格和详情页在小屏上体验差（水平滚动或内容截断）
+
+---
+
+## 四、设计升级待办清单
+
+### 4.1 Token 体系扩充
+
+- [ ] 暗色模式 token（`@media (prefers-color-scheme: dark)` 或 `dark:` 前缀）
+- [ ] 字号阶梯（xs/sm/base/lg/xl/2xl/3xl + line-height 配套）
+- [ ] 间距阶梯（4/8/12/16/24/32/48px 语义化命名）
+- [ ] 圆角阶梯（sm/md/lg/xl/full）
+- [ ] shadow 阶梯（subtle/medium/elevated）
+
+### 4.2 动画体系完善
+
+- [ ] hover/focus/active/loading 状态动画 token
+- [ ] `prefers-reduced-motion` 全局降级
+- [ ] TanStack Router outlet 页面切换过渡
+
+### 4.3 组件库扩展
+
+- [ ] shadcn/ui 统一 theme variant（primary/secondary/ghost/destructive）
+- [ ] 表单组件统一（全部用 shadcn Input/Select/Label，不用原生 HTML）
+- [ ] 图表组件统一决策（TV Charts 扩展 vs 统一换一套）
+- [ ] 数据表格增强（排序、过滤、列选择）
+- [ ] 空状态 / 加载状态 / 错误状态统一组件
+
+### 4.4 回测页升级
+
+- [ ] 配置向导（步骤引导，而非 8 个字段平铺）
+- [ ] 图表交互升级（zoom/pan/tooltip，支持多 series 叠加）
+- [ ] 策略对比（同时跑多个配置，并排展示结果）
+- [ ] 参数敏感性分析（滑动条实时重算）
+
+### 4.5 全局体验
+
+- [ ] 页面切换 loading 统一（骨架屏规范）
+- [ ] React Error Boundary
+- [ ] 移动端适配（表格横向滚动、详情页卡片化）
+
+---
+
+## 五、技术栈
 
 ### 后端
 

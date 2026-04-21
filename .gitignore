@@ -36,3 +36,5 @@ output/
 .env
 
 analyze.code-workspace
+
+data
