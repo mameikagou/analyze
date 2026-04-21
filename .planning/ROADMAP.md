@@ -124,9 +124,9 @@
 **UI hint:** yes — 强 UI，核心目标
 
 **Plans:**
-- [ ] `04-01-PLAN.md` — Wave 1+2：Token 修复 + 暗色模式 + 动画体系
-- [ ] `04-02-PLAN.md` — Wave 3+4：组件层统一 + 回测页翻新
-- [ ] `04-03-PLAN.md` — Wave 5：全局体验优化（Error Boundary + 移动端 + Toast）
+- [x] `04-01-PLAN.md` — Wave 1+2：Token 修复 + 暗色模式 + 动画体系 ✅ COMPLETE
+- [x] `04-02-PLAN.md` — Wave 3+4：组件层统一 + 回测页翻新 ✅ COMPLETE
+- [x] `04-03-PLAN.md` — Wave 5：全局体验优化（Error Boundary + 移动端 + Toast） ✅ COMPLETE
 
 ---
 
@@ -210,9 +210,9 @@ Phase 1 (后端 API) ───┬──► Phase 2 (前端仪表盘) ──┘
 | 1 | ✅ COMPLETE | 1 | 1 | — |
 | 2 | ✅ COMPLETE | 0 | 0 | — |
 | 3 | ✅ COMPLETE | 4 | 4 | — |
-| 4 | 📐 PLANNED | 0 | 0 | — |
-| 5 | ⏳ PENDING | 0 | 0 | — |
+| 4 | ✅ COMPLETE | 3 | 3 | — |
+| 5 | 📐 NEXT | 0 | 0 | — |
 | 6 | ⏳ PENDING | 0 | 0 | — |
 
 ---
-*Last updated: 2026-04-20 after Phase 3 planning*
+*Last updated: 2026-04-21 after Phase 4 execution complete*
