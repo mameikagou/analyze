@@ -1,3 +1,18 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: 收尾）
+status: initialized
+stopped_at: 2026-04-21 — Phase 4 UI Renovation 全部完成（3 个 plan：Token/DarkMode/Animation + Component Unification/Backtest Renovation + Global Experience/Mobile Responsive）
+last_updated: "2026-04-24T10:00:00Z"
+progress:
+  total_phases: 7
+  completed_phases: 1
+  total_plans: 7
+  completed_plans: 5
+  percent: 71
+---
+
 # State: Fund Screener v1.0
 
 **Current milestone:** v1.0
@@ -54,13 +69,16 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 ## Todos
 
 ### 等主人（设计考古）
+
 - [ ] 主人：用 DevTools 扒 claude.ai/new 样式，填写 `docs/design-audit-result.md`
 
 ### Phase 1（已完成 ✅）
+
 - [x] Phase 1：搭建 FastAPI 后端，暴露 REST API — `/health`, `/api/funds`, `/api/funds/{code}`, `/api/screening`, `/api/chart/{code}`, `/api/stats`
 - [x] Phase 1：对接 SQLite 数据湖，直接复用 storage.py 查询逻辑
 
 ### Phase 2（已完成 ✅）— 按 5 个 branch 拆分
+
 - [x] **Branch 1** `feat/api-hooks`：5 个 API hooks（useFunds/useFundDetail/useScreening/useChartData/useStats）+ barrel export — ✅ COMPLETE (commit a06da8a)
 - [x] **Branch 2** `feat/animation-tokens`：animation.tokens.ts + chart tokens CSS + CVA variants — ✅ COMPLETE (已合入 main)
 - [x] **Branch 3** `feat/ui-components`：10 个业务组件 + barrel export — ✅ COMPLETE (commit f4e8b7d)
@@ -68,9 +86,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [x] **Branch 5** `feat/pages-migrate`：4 个页面迁移（Dashboard/FundList/Screening/Chat），mock → 真数据 — ✅ COMPLETE
 
 ### Phase 3（已完成 ✅）— 回测引擎
+
 详见 `.planning/phases/03-backtest/`
 
 **Plan 03-01（Wave 1）：因子层 + 数据加载** — requirements: BACK-01, BACK-02 ✅ COMPLETE
+
 - [x] `factors/base.py` — BaseFactor + FactorOutput 抽象契约
 - [x] `factors/technical.py` — MACrossFactor（MA 多头排列信号）
 - [x] `factors/quant.py` — MomentumFactor / SharpeFactor / DrawdownFactor
@@ -79,26 +99,31 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [x] 单元测试 — 30 个 test cases, 全部通过
 
 **Plan 03-02（Wave 2）：回测引擎核心** — requirements: BACK-01~04 ✅ COMPLETE
+
 - [x] `backtest/config.py` — BacktestConfig（frozen dataclass）
 - [x] `backtest/engine.py` — BacktestEngine（vectorbt v1 `from_orders` 集成）
 - [x] `backtest/result.py` — BacktestResult（指标 + 净值曲线 + 回撤 + 序列化）
 - [x] 单元测试 — 24 个测试覆盖等权调仓 / score 加权 / signal 过滤 / 空仓
 
 **Plan 03-03（Wave 3）：API 层 + adj_nav 回填** — requirements: DATA-01~03, BACK-01~04 ✅ COMPLETE
+
 - [x] `api/routes/backtest.py` — POST `/api/backtest/run`
 - [x] `api/main.py` — 注册回测路由
 - [x] `scripts/backfill_adj_nav.py` — adj_nav 历史回填脚本（断点续传）
 - [x] 全量回填 — 后台运行，记录进度
 
 **Plan 03-04（Wave 4）：前端回测页** — requirements: BACK-03, BACK-04 ✅ COMPLETE
+
 - [x] `/backtest` 路由 — 配置面板 + 净值曲线 + 绩效卡片 + 调仓历史表
 - [x] `useBacktest` hook — POST `/api/backtest/run`
 - [x] 侧边栏导航更新
 
 ### Phase 4（已完成 ✅）— UI 翻新 (UI Renovation)
+
 详见 `.planning/phases/04-ui-renovation/`
 
 **Plan 04-01（Wave 1~2）：Token 修复 + 暗色模式 + 动画体系** ✅ COMPLETE
+
 - [x] `tokens.semantic.css` — 修复 `--bg-surface` 为 `#ffffff`，确保卡片白底
 - [x] `tokens.chart.css` — 新增 chart 语义 Token（涨跌色/均线色/网格色）
 - [x] `index.css` — shadcn HSL 桥接，映射到 Stone 色系
@@ -107,12 +132,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [x] `tokens.animation.ts` — 统一 presence / transition / stagger Token
 
 **Plan 04-02（Wave 3~4）：组件层统一 + 回测页翻新** ✅ COMPLETE
+
 - [x] `Surface` / `IconButton` / `TextButton` — 语义 Token 化
 - [x] `FundTable` — Surface 容器化 + `overflow-x-auto` 移动端适配
 - [x] `backtest/index.tsx` — 4 步 Stepper 向导 + LightweightChart 替换 Canvas
 - [x] `StatsCard` / `MarketBadge` / `FundDetailHeader` — Token 统一
 
 **Plan 04-03（Wave 5）：全局体验优化 + 移动端适配 + 质量门禁** ✅ COMPLETE
+
 - [x] `ErrorBoundary` — 全局渲染错误捕获，防白屏
 - [x] `Toast` 系统 — useToast hook + ToastProvider + 自动消失 + 动画
 - [x] 5 个页面 API 错误处理改造 — 全页错误 → Toast 通知
@@ -122,6 +149,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - [x] 关键 Bug 修复 — `React.useState` 未导入、`useToast.ts` 扩展名错误
 
 ### 待开工（后续 Phase）
+
 - [ ] Phase 5：定时任务自动化（cron/schedule）
 - [ ] Phase 6：报告自动生成 + 任务日志监控
 - [ ] Phase 7：回测结果前端展示增强（收益曲线、回撤图、策略对比）
@@ -150,3 +178,4 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 - 关注点分离：页面零样式，组件样式自包含，Token 集中管理
 - Phase 3 设计已冻结：`.planning/BACKTEST_DESIGN.md` — 因子/策略/回测三层解耦，vectorbt v1 集成，5 个关键设计决策已记录
 - 回测架构三条原则：`.planning/ARCHITECTURE.md` — 因子策略解耦 / 信号是唯一契约 / 回测层只做一件事
+- Milestone v1.0 总结报告已生成：`.planning/reports/MILESTONE_SUMMARY-v1.0.md` — 2026-04-24
