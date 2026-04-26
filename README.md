@@ -30,6 +30,12 @@ cat output/fund_report.md
 
 # 4. 查看数据湖统计
 uv run fund-screener --db-stats
+
+# 启动后端
+uv run uvicorn fund_screener.api.main:app --reload
+
+# 启动前端 
+bun dev
 ```
 
 ---

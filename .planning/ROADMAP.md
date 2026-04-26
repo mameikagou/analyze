@@ -10,7 +10,7 @@
 
 **Goal:** 复刻 claude.ai/new 的视觉语言和交互范式，建立可复用的 Token + 组件 + Skill 体系。
 
-**Status:** 🕐 WAITING — 等主人完成 `docs/design-audit-result.md`
+**Status:** ✅ DELIVERED — 初版已交付；设计考古仍作为后续微调输入
 
 **Depends on:** 主人用 DevTools 扒 claude.ai/new 样式（见 `docs/design-audit-template.md`）
 
@@ -33,6 +33,8 @@
 
 **Goal:** 把现有 Python CLI 能力包装为 REST API，供前端调用。
 
+**Status:** ✅ COMPLETE — 6 个 endpoint 全部注册并通过验证，CORS 已配置，可直接对接前端
+
 **Depends on:** 无（可与 Phase 0 并行）
 
 **Success Criteria:**
@@ -54,6 +56,8 @@
 ## Phase 2: 前端仪表盘（依赖 Phase 0 设计系统）
 
 **Goal:** 用 Phase 0 的设计系统，把 fund-screener 的数据可视化出来。
+
+**Status:** ✅ COMPLETE — 核心页面已对接真实 API，前端仪表盘闭环完成
 
 **Depends on:** Phase 0（设计系统）+ Phase 1（API）
 
@@ -242,9 +246,9 @@ Phase 1 (后端 API) ───┬──► Phase 2 (前端仪表盘) ──┘
 | 2 | ✅ COMPLETE | 0 | 0 | — |
 | 3 | ✅ COMPLETE | 4 | 4 | — |
 | 4 | ✅ COMPLETE | 3 | 3 | — |
-| 4.5 | 📐 NEXT | 1 | 0 | — |
-| 5 | ⏳ PENDING | 0 | 0 | — |
+| 4.5 | ✅ COMPLETE | 1 | 1 | — |
+| 5 | ⏭️ NEXT | 0 | 0 | — |
 | 6 | ⏳ PENDING | 0 | 0 | — |
 
 ---
-*Last updated: 2026-04-26 after adding Phase 4.5 Style Contract planning*
+*Last updated: 2026-04-26 after completing Phase 4.5 Style Contract and reconciling GSD artifacts*
