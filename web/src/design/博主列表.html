@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fund Screener | 档案馆</title>
+    
+    <!-- 引入指定的字体库 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@1,8..60,400&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ==========================================================================
+           1. 配色系统与基础设计令牌 (Primitive & Semantic Tokens)
+           ========================================================================== */
+        :root {
+            /* Primitive: Slate */
+            --slate-50:  #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-300: #cbd5e1;
+            --slate-400: #94a3b8;
+            --slate-500: #64748b;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+            --slate-950: #020617;
+
+            /* Primitive: Clay (碰瓷色) */
+            --clay-50:  #fdf4f1;
+            --clay-100: #fbe5dd;
+            --clay-200: #f7ccbc;
+            --clay-300: #f0a68c;
+            --clay-400: #e67a58;
+            --clay-500: #d85835;
+            --clay-600: #c1401f;
+            --clay-700: #9e3218;
+
+            /* Primitive: Moss (验证色) */
+            --moss-50:  #f4f7f2;
+            --moss-100: #e5ecdf;
+            --moss-200: #cbd9c0;
+            --moss-300: #a5bc94;
+            --moss-400: #7e9c6a;
+            --moss-500: #5f7d4a;
+            --moss-600: #4a6439;
+
+            /* Primitive: Steel (基准线) */
+            --steel-500: #3b6b8a;
+            --steel-600: #2d5471;
+
+            /* Semantic: Background */
+            --bg-canvas:     var(--slate-50);
+            --bg-surface:    #ffffff;
+            --bg-hover:      var(--slate-100);
+            --bg-active:     var(--slate-200);
+            --bg-inverse:    var(--slate-900);
+
+            /* Semantic: Text */
+            --text-primary:   var(--slate-900);
+            --text-secondary: var(--slate-600);
+            --text-muted:     var(--slate-500);
+            --text-faint:     var(--slate-400);
+            --text-inverse:   var(--slate-50);
+
+            /* Semantic: Borders */
+            --border-subtle:   var(--slate-200);
+            --border-default:  var(--slate-300);
+            --border-strong:   var(--slate-400);
+            --border-emphasis: var(--slate-900);
+
+            /* Semantic: Data specific */
+            --data-claim:          var(--slate-400);
+            --data-actual:         var(--slate-900);
+            --data-delta-positive: var(--moss-600);
+            --data-delta-negative: var(--clay-600);
+
+            /* Typography */
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-serif: 'Source Serif 4', serif;
+
+            /* Animation */
+            --duration-instant: 80ms;
+            --duration-fast: 160ms;
+            --duration-normal: 240ms;
+            --duration-deliberate: 600ms;
+            
+            --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+            --easing-sharp: cubic-bezier(0.4, 0, 0.6, 1);
+        }
+
+        /* ==========================================================================
+           2. 基础重置与排版设置
+           ========================================================================== */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-canvas);
+            color: var(--text-primary);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 实用类 */
+        .font-mono { font-family: var(--font-mono); }
+        .font-serif { font-family: var(--font-serif); }
+        .text-primary { color: var(--text-primary); }
+        .text-secondary { color: var(--text-secondary); }
+        .text-muted { color: var(--text-muted); }
+        .text-faint { color: var(--text-faint); }
+        .tabular-nums { font-variant-numeric: tabular-nums; }
+        .tracking-widest { letter-spacing: 0.1em; }
+        .uppercase { text-transform: uppercase; }
+
+        /* ==========================================================================
+           3. 模块级样式
+           ========================================================================== */
+        
+        /* Hero 实时数据条 */
+        .hero-bar {
+            background-color: var(--bg-inverse);
+            color: var(--text-inverse);
+            padding: 24px 48px;
+            display: flex;
+            gap: 80px;
+            border-bottom: 1px solid var(--slate-800);
+        }
+
+        .stat-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: var(--slate-400);
+        }
+
+        .stat-value {
+            font-size: 24px; /* text-3xl approx */
+            font-weight: 500;
+        }
+
+        /* 主体布局 */
+        .main-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 40px 48px;
+        }
+
+        /* 筛选工具条 */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 32px;
+        }
+
+        .tab {
+            padding: 12px 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            position: relative;
+            transition: color var(--duration-fast) var(--easing-standard);
+        }
+
+        .tab:hover { color: var(--text-primary); }
+
+        .tab.active {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1.5px;
+            background-color: var(--border-emphasis);
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 24px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        .filter-item { cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .filter-item:hover { color: var(--text-primary); }
+
+        /* 数据密集型表格 */
+        .data-table-wrapper {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02); /* 极弱阴影 */
+            opacity: 0; /* 初始透明，供入场动画使用 */
+            animation: fadeInTable var(--duration-normal) var(--easing-standard) forwards;
+            animation-delay: 100ms;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .data-table th {
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-muted);
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border-subtle);
+            cursor: pointer;
+        }
+
+        .data-table tbody tr {
+            height: 56px;
+            border-bottom: 1px solid transparent; /* 为动画预留 */
+            position: relative;
+            background-color: var(--bg-surface);
+            transition: background-color var(--duration-instant) var(--easing-standard);
+            cursor: pointer;
+        }
+
+        /* 表格行扫描入场动画细节：利用下边框的伪元素 */
+        .data-table tbody tr::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background-color: var(--border-subtle);
+            transform-origin: left;
+            transform: scaleX(0);
+        }
+
+        /* 动画类由 JS 逐行赋予 */
+        .scan-in::after {
+            animation: scanBorder var(--duration-normal) var(--easing-sharp) forwards;
+        }
+
+        .data-table tbody tr:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .data-table tbody tr:active {
+            background-color: var(--bg-active);
+            transition-duration: var(--duration-normal);
+        }
+
+        .data-table td {
+            padding: 0 24px;
+            font-size: 14px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        /* 列定制 */
+        .col-rank { width: 60px; }
+        .col-blogger { display: flex; align-items: center; gap: 12px; height: 56px; }
+        .avatar { width: 24px; height: 24px; border-radius: 4px; background: var(--slate-200); display: inline-block; }
+        .platform-icon { width: 14px; height: 14px; color: var(--slate-400); margin-left: 6px; vertical-align: text-top;}
+        
+        .col-claim { color: var(--data-claim); }
+        .col-actual { color: var(--data-actual); font-weight: 500; }
+        
+        .delta-positive { color: var(--data-delta-positive); }
+        .delta-negative { color: var(--data-delta-negative); }
+        /* 戏剧性差值背景 (绝对值>15%) */
+        .bg-exposed { background-color: var(--clay-50); }
+        
+        .auth-bar-container { display: flex; align-items: center; gap: 8px; }
+        .auth-bar-track { width: 48px; height: 2px; background-color: var(--slate-200); border-radius: 1px; }
+        .auth-bar-fill { height: 100%; background-color: var(--slate-700); border-radius: 1px; }
+
+        /* 悬停箭头指示器 */
+        .row-arrow {
+            color: var(--slate-400);
+            opacity: 0;
+            transform: translateX(-4px);
+            transition: all var(--duration-fast) var(--easing-standard);
+        }
+        .data-table tbody tr:hover .row-arrow {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* ==========================================================================
+           4. 关键帧动画 (Keyframes)
+           ========================================================================== */
+        @keyframes fadeInTable {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes scanBorder {
+            from { transform: scaleX(0); }
+            to { transform: scaleX(1); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Hero 实时数据条 -->
+    <header class="hero-bar">
+        <div class="stat-group">
+            <span class="stat-label uppercase tracking-widest">已收录博主</span>
+            <span class="stat-value font-mono tabular-nums" id="stat-bloggers">0</span>
+        </div>
+        <div class="stat-group">
+            <span class="stat-label uppercase tracking-widest">已验证晒单</span>
+            <span class="stat-value font-mono tabular-nums" id="stat-records">0</span>
+        </div>
+        <div class="stat-group">
+            <span class="stat-label uppercase tracking-widest">最新更新</span>
+            <span class="stat-value font-mono tabular-nums">12 分钟前</span>
+        </div>
+    </header>
+
+    <!-- 主容器 -->
+    <main class="main-container">
+        
+        <!-- 筛选工具条 -->
+        <nav class="filter-bar">
+            <div class="tabs">
+                <div class="tab active">全部平台</div>
+                <div class="tab">支付宝</div>
+                <div class="tab">雪球</div>
+                <div class="tab">小红书</div>
+                <div class="tab">推特</div>
+            </div>
+            <div class="filter-controls">
+                <div class="filter-item">
+                    品类：全部
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <div class="filter-item">粉丝量：全部</div>
+                <div class="filter-item text-primary font-medium">真实度系数 ↓</div>
+            </div>
+        </nav>
+
+        <!-- 数据密集型表格 -->
+        <div class="data-table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th class="col-rank">#</th>
+                        <th>博主标识</th>
+                        <th>粉丝量</th>
+                        <th>宣称年化</th>
+                        <th>真实年化</th>
+                        <th>差值</th>
+                        <th>真实度</th>
+                        <th>样本量</th>
+                        <th>最新验单</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- 数据由JS渲染，保持HTML整洁并处理动画延时 -->
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <!-- 平台图标SVG符号库 -->
+    <svg style="display: none;">
+        <symbol id="icon-alipay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M8 12l3 3 5-5"/>
+        </symbol>
+        <symbol id="icon-xueqiu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
+        </symbol>
+        <symbol id="icon-xhs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12h8"/><path d="M12 8v8"/>
+        </symbol>
+    </svg>
+
+    <script>
+        // ==========================================================================
+        // JS: 动画逻辑与数据渲染
+        // ==========================================================================
+
+        // 1. Hero 数字滚动动画 (Deliberate 600ms, Sharp Easing 模拟)
+        function countUp(elementId, targetValue, duration) {
+            const el = document.getElementById(elementId);
+            const startTime = performance.now();
+            // 简单的 ease-out 曲线用于数字滚动
+            const easeOutExpo = (t) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easedProgress = easeOutExpo(progress);
+                
+                const currentValue = Math.floor(easedProgress * targetValue);
+                el.innerText = currentValue.toLocaleString('en-US'); // 加上千位分隔符
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                } else {
+                    el.innerText = targetValue.toLocaleString('en-US');
+                }
+            }
+            requestAnimationFrame(update);
+        }
+
+        // 页面加载即触发数字滚动
+        window.addEventListener('DOMContentLoaded', () => {
+            countUp('stat-bloggers', 2847, 600);
+            countUp('stat-records', 31409, 600);
+            renderTable();
+        });
+
+        // 2. 表格数据模拟与渲染
+        const mockData = [
+            { id: 1, name: "A股大明白***", platform: "xueqiu", followers: "14.2w", claim: "35.0%", actual: "12.4%", delta: -22.6, auth: 42, samples: 128, time: "2 小时前" },
+            { id: 2, name: "稳健定投老***", platform: "alipay", followers: "8.5w", claim: "15.0%", actual: "14.2%", delta: -0.8, auth: 94, samples: 340, time: "5 小时前" },
+            { id: 3, name: "华尔街财报***", platform: "xhs", followers: "32.1w", claim: "68.0%", actual: "-4.5%", delta: -72.5, auth: 12, samples: 45, time: "昨天" },
+            { id: 4, name: "ETF套利日***", platform: "xueqiu", followers: "4.3w", claim: "18.5%", actual: "19.2%", delta: 0.7, auth: 98, samples: 210, time: "昨天" },
+            { id: 5, name: "短线擒龙***", platform: "xhs", followers: "88.9w", claim: "120.0%", actual: "5.1%", delta: -114.9, auth: 8, samples: 16, time: "2 天前" },
+            { id: 6, name: "量化回测机***", platform: "alipay", followers: "2.1w", claim: "22.0%", actual: "20.1%", delta: -1.9, auth: 88, samples: 512, time: "1 周前" },
+        ];
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            let html = '';
+
+            mockData.forEach((row, index) => {
+                // 极度克制的差值条件色逻辑
+                let deltaStr = row.delta > 0 ? `+${row.delta.toFixed(1)}%` : `${row.delta.toFixed(1)}%`;
+                let deltaClass = row.delta > 0 ? 'delta-positive' : 'delta-negative';
+                
+                // 只有负差值绝对值 > 15%，才激活整行“碰瓷色”微弱背景，制造一次戏剧张力
+                let trClass = (row.delta <= -15) ? 'bg-exposed scan-in' : 'scan-in';
+
+                html += `
+                    <tr class="${trClass}" style="animation-delay: ${index * 0.012}s">
+                        <td class="col-rank font-mono text-faint">${String(row.id).padStart(2, '0')}</td>
+                        <td>
+                            <div class="col-blogger">
+                                <div class="avatar"></div>
+                                <span class="text-primary">${row.name}</span>
+                                <svg class="platform-icon"><use href="#icon-${row.platform}"></use></svg>
+                            </div>
+                        </td>
+                        <td class="font-mono text-secondary">${row.followers}</td>
+                        <td class="font-mono col-claim">${row.claim}</td>
+                        <td class="font-mono col-actual">${row.actual}</td>
+                        <td class="font-mono ${deltaClass}">${deltaStr}</td>
+                        <td>
+                            <div class="auth-bar-container">
+                                <span class="font-mono text-secondary">${row.auth}</span>
+                                <div class="auth-bar-track">
+                                    <div class="auth-bar-fill" style="width: ${row.auth}%;"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-muted tabular-nums">${row.samples}</td>
+                        <td class="text-faint">${row.time}</td>
+                        <td>
+                            <!-- 悬停才出现的极简指示器 -->
+                            <svg class="row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+    </script>
+</body>
+</html>

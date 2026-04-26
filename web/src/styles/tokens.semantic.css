@@ -50,6 +50,33 @@
   --accent-info:            var(--blue-500);
   --accent-info-subtle:     var(--blue-100);
 
+  /* 金融语义色：只服务状态、风险、评分和证据，不参与装饰 */
+  --signal-positive: var(--green-600);
+  --signal-negative: var(--red-600);
+  --signal-neutral: var(--stone-500);
+  --signal-warning: var(--orange-600);
+  --signal-positive-subtle: var(--green-50);
+  --signal-negative-subtle: var(--red-50);
+  --signal-neutral-subtle: var(--stone-100);
+  --signal-warning-subtle: var(--orange-50);
+
+  --exposure-tech: #3b82f6;
+  --exposure-consumer: #f97316;
+  --exposure-financial: #64748b;
+  --exposure-healthcare: #22c55e;
+  --exposure-industrial: #a855f7;
+  --exposure-energy: #eab308;
+  --exposure-cash: var(--stone-400);
+  --exposure-other: var(--stone-500);
+
+  --score-strong: var(--signal-positive);
+  --score-medium: var(--signal-warning);
+  --score-weak: var(--signal-negative);
+
+  --risk-low: var(--signal-positive);
+  --risk-medium: var(--signal-warning);
+  --risk-high: var(--signal-negative);
+
   /* 阴影 — Claude 极少用阴影，基本只有 focus ring 和 elevated 面板 */
   --shadow-elevated: 0 4px 24px rgba(0, 0, 0, 0.08);
   --shadow-dropdown: 0 8px 32px rgba(0, 0, 0, 0.12);
@@ -94,6 +121,11 @@
   --accent-success-subtle:  var(--green-900);
   --accent-error-subtle:    var(--red-900);
   --accent-info-subtle:     var(--blue-900);
+
+  --signal-positive-subtle: rgba(34, 197, 94, 0.14);
+  --signal-negative-subtle: rgba(239, 68, 68, 0.14);
+  --signal-neutral-subtle: var(--stone-800);
+  --signal-warning-subtle: rgba(249, 115, 22, 0.14);
 
   --shadow-elevated: 0 4px 24px rgba(0, 0, 0, 0.4);
   --shadow-dropdown: 0 8px 32px rgba(0, 0, 0, 0.5);
