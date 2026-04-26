@@ -130,6 +130,33 @@
 
 ---
 
+## Phase 4.5: Style Contract + AI Generation Contract
+
+**Goal:** 在 Phase 4 已完成的 Token/组件/暗色模式基础上，补齐可执行的 Claude-like + Archive Finance 风格契约，让 AI 后续批量生成 `/funds/:code`、`/screening`、`/funds`、首页等页面时稳定遵守同一套审美、布局、组件和禁止规则。
+
+**Depends on:** Phase 0（Claude 设计系统）+ Phase 4（UI Renovation 已完成）
+
+**Key Decisions:**
+- 不改变产品方向，不重做 Phase 0/4，不推翻现有 Token/组件体系。
+- 风格定位为 **Claude base + Archive finance variant**：Claude 的暖灰、留白、Surface 层级作为全局底座；金融档案馆的数据密度、mono 数字、行业暴露色只用于证据区。
+- 本阶段产物优先服务 AI 生成，不优先做页面翻新；先把 Page Archetype、Composition Rules、Forbidden Patterns、AI Checklist 写死。
+- 行业/风险/信号颜色必须通过金融语义 Token 使用，禁止组件直接引用 Primitive Token。
+
+**Success Criteria:**
+1. `04.5-STYLE-CONTRACT.md` 完成：定义 Claude-like visual principles、Archive finance variant、Surface hierarchy、Typography/data density、financial semantic tokens、allowed/forbidden patterns。
+2. `04.5-CONTEXT.md` 完成：明确哪些建议必须落地、哪些降级、哪些暂缓，避免继续画饼。
+3. `.claude/skills/claude-ui-system/` 补齐 AI 生成规则：patterns、anti-patterns、checklist，要求生成页面前先选择 archetype。
+4. 修正既有计划/示例中的规则漏洞：组件示例不得直接使用 `var(--green-500)` / `var(--red-500)` 等 Primitive Token，必须改为 semantic / financial semantic token。
+5. 增补金融语义 Token：signal、exposure、score、risk 四类 token，并限制使用边界。
+6. 为后续页面生成建立验收清单：不出现 admin dashboard 感；每个页面只有一个主焦点；颜色必须有业务意义；所有容器走 `Surface`；所有数据密集区走 archive table/dossier 规范。
+7. 至少用一个真实页面小范围验证契约可执行，但本阶段不要求批量重写页面。
+
+**Requirements mapped:** DSGN-01 ~ DSGN-08, FRONT-01 ~ FRONT-05（风格生成前置）
+
+**UI hint:** yes — 强 UI，核心目标是设计契约和 AI 生成约束
+
+---
+
 ## Phase 5: 定时任务 + 自动化
 
 **Goal:** 每日自动跑筛选，自动生成报告。
@@ -181,6 +208,9 @@ Phase 1 (后端 API) ───┬──► Phase 2 (前端仪表盘) ──┘
         │             Phase 4 (UI 设计升级)
         │                      │
         │                      ▼
+        │             Phase 4.5 (Style Contract)
+        │                      │
+        │                      ▼
         │             Phase 5 (定时任务)
         │                      │
         │                      ▼
@@ -197,8 +227,9 @@ Phase 1 (后端 API) ───┬──► Phase 2 (前端仪表盘) ──┘
 2. **设计考古完成后：** Phase 0（设计系统）→ 然后 Phase 2（前端仪表盘）
 3. **Phase 1 完成后：** Phase 3（回测引擎）可与 Phase 0/2 并行
 4. **Phase 3 完成后：** Phase 4（UI 设计升级）
-5. **Phase 4 完成后：** Phase 5（定时任务）
-6. **收尾：** Phase 6（回测展示）
+5. **Phase 4 完成后：** Phase 4.5（Style Contract + AI Generation Contract）
+6. **Phase 4.5 完成后：** Phase 5（定时任务）
+7. **收尾：** Phase 6（回测展示）
 
 ---
 
@@ -211,8 +242,9 @@ Phase 1 (后端 API) ───┬──► Phase 2 (前端仪表盘) ──┘
 | 2 | ✅ COMPLETE | 0 | 0 | — |
 | 3 | ✅ COMPLETE | 4 | 4 | — |
 | 4 | ✅ COMPLETE | 3 | 3 | — |
-| 5 | 📐 NEXT | 0 | 0 | — |
+| 4.5 | 📐 NEXT | 1 | 0 | — |
+| 5 | ⏳ PENDING | 0 | 0 | — |
 | 6 | ⏳ PENDING | 0 | 0 | — |
 
 ---
-*Last updated: 2026-04-21 after Phase 4 execution complete*
+*Last updated: 2026-04-26 after adding Phase 4.5 Style Contract planning*
