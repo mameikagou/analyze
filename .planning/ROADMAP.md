@@ -14,7 +14,7 @@
 
 **Depends on:** 主人用 DevTools 扒 claude.ai/new 样式（见 `docs/design-audit-template.md`）
 
-**Success Criteria:**
+**Success Criteria**:
 1. `docs/design-audit-result.md` 完成（主人做）
 2. Token 三层体系落地（Primitive → Semantic → Component）
 3. 核心原子组件封装完成（Surface, Prose, AutoTextarea, Composer, IconButton, TextButton）
@@ -37,7 +37,7 @@
 
 **Depends on:** 无（可与 Phase 0 并行）
 
-**Success Criteria:**
+**Success Criteria**:
 1. FastAPI / 轻量框架搭建 API 服务
 2. `/api/funds` — 基金列表（分页、筛选、排序）
 3. `/api/funds/{code}` — 单只基金详情
@@ -61,7 +61,7 @@
 
 **Depends on:** Phase 0（设计系统）+ Phase 1（API）
 
-**Success Criteria:**
+**Success Criteria**:
 1. 首页：总览统计卡片（总基金数、今日通过 MA、平均分、数据湖记录数）
 2. 基金列表页：表格展示，支持按 MA 差值/打分/申购状态排序
 3. 基金详情页：净值走势图（TV Charts + MA 均线叠加）、基本信息卡片、持仓结构
@@ -82,7 +82,7 @@
 
 **Depends on:** Phase 1（API 和数据层已就绪）
 
-**Success Criteria:**
+**Success Criteria**:
 1. adj_nav 历史回填脚本（遍历所有基金，补齐旧数据的 adj_nav NULL）
 2. 回填进度监控 + 断点续传
 3. 回测引擎框架（策略信号 → 模拟持仓 → 收益计算）
@@ -116,7 +116,7 @@
 - 动画库：引入 Framer Motion（页面过渡 + 交互动画）
 - 翻新顺序：从回测页开始（最不满意）→ 筛选页 → 基金详情 → 基金列表 → 首页 → 聊天页
 
-**Success Criteria:**
+**Success Criteria**:
 1. Token 体系统一：shadcn HSL 和 Stone hex Token 不再打架，暗色模式一键切换
 2. 动画体系：页面切换淡入淡出，hover 统一过渡，loading 状态一致
 3. 回测页翻新：LightweightChart 净值曲线 + 交互式配置向导 + 增强 StatsCard（sparkline）
@@ -146,7 +146,7 @@
 - 本阶段产物优先服务 AI 生成，不优先做页面翻新；先把 Page Archetype、Composition Rules、Forbidden Patterns、AI Checklist 写死。
 - 行业/风险/信号颜色必须通过金融语义 Token 使用，禁止组件直接引用 Primitive Token。
 
-**Success Criteria:**
+**Success Criteria**:
 1. `04.5-STYLE-CONTRACT.md` 完成：定义 Claude-like visual principles、Archive finance variant、Surface hierarchy、Typography/data density、financial semantic tokens、allowed/forbidden patterns。
 2. `04.5-CONTEXT.md` 完成：明确哪些建议必须落地、哪些降级、哪些暂缓，避免继续画饼。
 3. `.claude/skills/claude-ui-system/` 补齐 AI 生成规则：patterns、anti-patterns、checklist，要求生成页面前先选择 archetype。
@@ -159,6 +159,10 @@
 
 **UI hint:** yes — 强 UI，核心目标是设计契约和 AI 生成约束
 
+**Plans:**
+- [x] `04.5-01-PLAN.md` — Style Contract + AI Generation Guardrails ✅ COMPLETE
+- [ ] `04.5-02-PLAN.md` — Kimi-executable Page Renovation Queue（/funds → /funds/$code → /）
+
 ---
 
 ## Phase 5: 定时任务 + 自动化
@@ -167,7 +171,7 @@
 
 **Depends on:** Phase 1 + Phase 3（数据完整 + 回测框架就绪）
 
-**Success Criteria:**
+**Success Criteria**:
 1. 定时任务编排（cron / schedule / APScheduler）
 2. 每日固定时间自动跑全市场筛选
 3. 报告自动生成和持久化（保存到 output/ 目录，带时间戳）
@@ -187,7 +191,7 @@
 
 **Depends on:** Phase 2（前端框架）+ Phase 3（回测有数据）+ Phase 5（自动化有日志）
 
-**Success Criteria:**
+**Success Criteria**:
 1. 回测结果页：收益曲线、回撤图、关键指标卡片
 2. 任务状态页：最近运行记录、成功/失败状态、耗时
 3. 定时任务配置 UI（可选，先只做展示）
@@ -239,6 +243,15 @@ Phase 1 (后端 API) ───┬──► Phase 2 (前端仪表盘) ──┘
 
 ## Progress Tracking
 
+- [x] **Phase 0:** Claude 设计系统 — 初版已交付，设计考古保留为后续微调输入
+- [x] **Phase 1:** 后端 API 层 — COMPLETE
+- [x] **Phase 2:** 前端仪表盘 — COMPLETE
+- [x] **Phase 3:** 数据质量 + 回测引擎 — COMPLETE
+- [x] **Phase 4:** 前端设计升级（UI Renovation） — COMPLETE
+- [ ] **Phase 4.5:** Style Contract + AI Generation Contract — IN PROGRESS（04.5-01 complete；04.5-02 page renovation queue pending）
+- [ ] **Phase 5:** 定时任务 + 自动化 — PENDING（blocked by Phase 4.5 completion）
+- [ ] **Phase 6:** 回测结果前端展示 — PENDING
+
 | Phase | Status | Plans | Summaries | UAT |
 |-------|--------|-------|-----------|-----|
 | 0 | ✅ DELIVERED | 1 | 1 | — |
@@ -246,9 +259,9 @@ Phase 1 (后端 API) ───┬──► Phase 2 (前端仪表盘) ──┘
 | 2 | ✅ COMPLETE | 0 | 0 | — |
 | 3 | ✅ COMPLETE | 4 | 4 | — |
 | 4 | ✅ COMPLETE | 3 | 3 | — |
-| 4.5 | ✅ COMPLETE | 1 | 1 | — |
-| 5 | ⏭️ NEXT | 0 | 0 | — |
+| 4.5 | 🔄 IN PROGRESS | 2 | 1 | — |
+| 5 | ⏳ PENDING | 0 | 0 | — |
 | 6 | ⏳ PENDING | 0 | 0 | — |
 
 ---
-*Last updated: 2026-04-26 after completing Phase 4.5 Style Contract and reconciling GSD artifacts*
+*Last updated: 2026-04-26 after reconciling Phase 4.5 as in progress with 04.5-02 pending*
