@@ -18,6 +18,9 @@ import { useScreening } from '@/hooks/api'
 import { useToast } from '@/hooks/useToast'
 import { ScreeningResultItem } from '@/components/views/ScreeningResultItem'
 import { StatsCard } from '@/components/views/StatsCard'
+import { ArchiveTable } from '@/components/ui/archive-table'
+import { PageHeader } from '@/components/ui/page-header'
+import { PageShell } from '@/components/ui/page-shell'
 
 export const Route = createFileRoute('/screening/')({
   component: ScreeningPage,
@@ -48,26 +51,24 @@ function ScreeningPage() {
   /* ── 加载中 ────────────────────────────────────────────── */
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
-        <p className="text-sm text-[var(--text-muted)]">加载筛选结果...</p>
-      </div>
+      <PageShell>
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+          <p className="text-sm text-[var(--text-muted)]">加载筛选结果...</p>
+        </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* 标题 */}
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-          筛选结果
-        </h2>
-        <p className="text-sm text-[var(--text-muted)]">
-          MA 均线多头排列 + 量化打分排名 — {screeningDate || '—'}
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="Archive List"
+        title="筛选结果"
+        description={`MA 均线多头排列 + 量化打分排名 — ${screeningDate || '—'}`}
+        statusSummary={`当前命中 ${count} 只基金，平均分 ${avgScore > 0 ? avgScore.toFixed(1) : '—'}`}
+      />
 
-      {/* 统计卡片 */}
       <div className="grid gap-4 md:grid-cols-3">
         <StatsCard
           title="通过 MA 筛选"
@@ -89,24 +90,25 @@ function ScreeningPage() {
         />
       </div>
 
-      {/* 筛选结果列表 */}
-      <div className="space-y-2">
-        {results.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)] py-8 text-center">
-            暂无筛选数据
-          </p>
-        ) : (
-          results.map((item) => (
-            <ScreeningResultItem
-              key={item.code}
-              item={item}
-              onClick={(code) => {
-                navigate({ to: '/funds/$code', params: { code } })
-              }}
-            />
-          ))
-        )}
-      </div>
-    </div>
+      <ArchiveTable>
+        <div className="space-y-2 p-3">
+          {results.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] py-8 text-center">
+              暂无筛选数据
+            </p>
+          ) : (
+            results.map((item) => (
+              <ScreeningResultItem
+                key={item.code}
+                item={item}
+                onClick={(code) => {
+                  navigate({ to: '/funds/$code', params: { code } })
+                }}
+              />
+            ))
+          )}
+        </div>
+      </ArchiveTable>
+    </PageShell>
   )
 }
