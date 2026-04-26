@@ -29,9 +29,9 @@ export const marketBadgeVariants = cva(
   {
     variants: {
       market: {
-        CN: 'bg-[var(--red-100)] text-[var(--red-600)]',
-        US: 'bg-[var(--blue-100)] text-[var(--blue-600)]',
-        HK: 'bg-[var(--orange-100)] text-[var(--orange-600)]',
+        CN: 'bg-[var(--accent-error-subtle)] text-[var(--accent-error)]',
+        US: 'bg-[var(--accent-info-subtle)] text-[var(--accent-info)]',
+        HK: 'bg-[var(--accent-primary-subtle)] text-[var(--accent-primary)]',
       },
     },
     defaultVariants: {
@@ -52,13 +52,13 @@ export const scoreBadgeVariants = cva(
     variants: {
       level: {
         excellent:
-          'bg-[var(--green-100)] text-[var(--green-600)]',
+          'bg-[var(--accent-success-subtle)] text-[var(--accent-success)]',
         good:
-          'bg-[var(--blue-100)] text-[var(--blue-600)]',
+          'bg-[var(--accent-info-subtle)] text-[var(--accent-info)]',
         average:
-          'bg-[var(--orange-100)] text-[var(--orange-600)]',
+          'bg-[var(--accent-primary-subtle)] text-[var(--accent-primary)]',
         poor:
-          'bg-[var(--red-100)] text-[var(--red-600)]',
+          'bg-[var(--accent-error-subtle)] text-[var(--accent-error)]',
       },
     },
     defaultVariants: {
@@ -93,13 +93,13 @@ export const purchaseStatusVariants = cva(
     variants: {
       status: {
         open:
-          'bg-[var(--green-100)] text-[var(--green-600)]',
+          'bg-[var(--accent-success-subtle)] text-[var(--accent-success)]',
         limit:
-          'bg-[var(--orange-100)] text-[var(--orange-600)]',
+          'bg-[var(--accent-primary-subtle)] text-[var(--accent-primary)]',
         closed:
-          'bg-[var(--red-100)] text-[var(--red-600)]',
+          'bg-[var(--accent-error-subtle)] text-[var(--accent-error)]',
         suspended:
-          'bg-[var(--stone-200)] text-[var(--stone-500)]',
+          'bg-[var(--bg-active)] text-[var(--text-muted)]',
       },
     },
     defaultVariants: {
@@ -120,13 +120,13 @@ export const maDiffVariants = cva(
     variants: {
       strength: {
         strong:
-          'text-[var(--green-600)]',
+          'text-[var(--accent-success)]',
         moderate:
-          'text-[var(--blue-600)]',
+          'text-[var(--accent-info)]',
         weak:
-          'text-[var(--orange-600)]',
+          'text-[var(--accent-primary)]',
         negative:
-          'text-[var(--red-600)]',
+          'text-[var(--accent-error)]',
       },
     },
     defaultVariants: {
@@ -158,9 +158,9 @@ export function maDiffToStrength(pct: number): MADiffVariant {
 export const trendVariants = cva('inline-flex items-center gap-1 text-sm font-medium', {
   variants: {
     direction: {
-      up: 'text-[var(--green-600)]',
-      down: 'text-[var(--red-600)]',
-      neutral: 'text-[var(--stone-500)]',
+      up: 'text-[var(--accent-success)]',
+      down: 'text-[var(--accent-error)]',
+      neutral: 'text-[var(--text-muted)]',
     },
   },
   defaultVariants: {
@@ -179,9 +179,9 @@ export const volatilityVariants = cva(
   {
     variants: {
       level: {
-        high: 'bg-[var(--red-100)] text-[var(--red-600)]',
-        medium: 'bg-[var(--orange-100)] text-[var(--orange-600)]',
-        low: 'bg-[var(--green-100)] text-[var(--green-600)]',
+        high: 'bg-[var(--accent-error-subtle)] text-[var(--accent-error)]',
+        medium: 'bg-[var(--accent-primary-subtle)] text-[var(--accent-primary)]',
+        low: 'bg-[var(--accent-success-subtle)] text-[var(--accent-success)]',
       },
     },
     defaultVariants: {
