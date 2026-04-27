@@ -17,7 +17,7 @@
  */
 
 import { useEffect } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Database, Filter, TrendingUp, Activity, Loader2, ArrowRight } from 'lucide-react'
 import { useStats, useScreening } from '@/hooks/api'
 import { useToast } from '@/hooks/useToast'
@@ -32,6 +32,7 @@ export const Route = createFileRoute('/')({
 })
 
 function DashboardPage() {
+  const navigate = useNavigate()
   const { data: stats, isLoading: statsLoading, error: statsError } = useStats()
   const { data: screeningData, isLoading: screeningLoading, error: screeningError } = useScreening({ limit: 10 })
   const { toast } = useToast()
@@ -141,7 +142,7 @@ function DashboardPage() {
                 key={item.code}
                 item={item}
                 onClick={(code) => {
-                  window.location.href = `/funds/${code}`
+                  navigate({ to: '/funds/$code', params: { code } })
                 }}
               />
             ))
