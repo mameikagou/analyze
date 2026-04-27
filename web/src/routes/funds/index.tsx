@@ -67,6 +67,7 @@ function FundsPage() {
       <ArchiveTable>
         <FundTable
           funds={funds}
+          unstyled
           onRowClick={(code) => {
             navigate({ to: '/funds/$code', params: { code } })
           }}

@@ -52,13 +52,13 @@ export const scoreBadgeVariants = cva(
     variants: {
       level: {
         excellent:
-          'bg-[var(--accent-success-subtle)] text-[var(--accent-success)]',
+          'bg-[var(--signal-positive-subtle)] text-[var(--score-strong)]',
         good:
-          'bg-[var(--accent-info-subtle)] text-[var(--accent-info)]',
+          'bg-[var(--signal-neutral-subtle)] text-[var(--signal-positive)]',
         average:
-          'bg-[var(--accent-primary-subtle)] text-[var(--accent-primary)]',
+          'bg-[var(--signal-warning-subtle)] text-[var(--score-medium)]',
         poor:
-          'bg-[var(--accent-error-subtle)] text-[var(--accent-error)]',
+          'bg-[var(--signal-negative-subtle)] text-[var(--score-weak)]',
       },
     },
     defaultVariants: {
@@ -93,11 +93,11 @@ export const purchaseStatusVariants = cva(
     variants: {
       status: {
         open:
-          'bg-[var(--accent-success-subtle)] text-[var(--accent-success)]',
+          'bg-[var(--signal-positive-subtle)] text-[var(--signal-positive)]',
         limit:
-          'bg-[var(--accent-primary-subtle)] text-[var(--accent-primary)]',
+          'bg-[var(--signal-warning-subtle)] text-[var(--signal-warning)]',
         closed:
-          'bg-[var(--accent-error-subtle)] text-[var(--accent-error)]',
+          'bg-[var(--signal-negative-subtle)] text-[var(--signal-negative)]',
         suspended:
           'bg-[var(--bg-active)] text-[var(--text-muted)]',
       },
@@ -120,13 +120,13 @@ export const maDiffVariants = cva(
     variants: {
       strength: {
         strong:
-          'text-[var(--accent-success)]',
+          'text-[var(--signal-positive)]',
         moderate:
-          'text-[var(--accent-info)]',
+          'text-[var(--signal-neutral)]',
         weak:
-          'text-[var(--accent-primary)]',
+          'text-[var(--signal-warning)]',
         negative:
-          'text-[var(--accent-error)]',
+          'text-[var(--signal-negative)]',
       },
     },
     defaultVariants: {
@@ -158,9 +158,9 @@ export function maDiffToStrength(pct: number): MADiffVariant {
 export const trendVariants = cva('inline-flex items-center gap-1 text-sm font-medium', {
   variants: {
     direction: {
-      up: 'text-[var(--accent-success)]',
-      down: 'text-[var(--accent-error)]',
-      neutral: 'text-[var(--text-muted)]',
+      up: 'text-[var(--signal-positive)]',
+      down: 'text-[var(--signal-negative)]',
+      neutral: 'text-[var(--signal-neutral)]',
     },
   },
   defaultVariants: {
@@ -179,9 +179,9 @@ export const volatilityVariants = cva(
   {
     variants: {
       level: {
-        high: 'bg-[var(--accent-error-subtle)] text-[var(--accent-error)]',
-        medium: 'bg-[var(--accent-primary-subtle)] text-[var(--accent-primary)]',
-        low: 'bg-[var(--accent-success-subtle)] text-[var(--accent-success)]',
+        high: 'bg-[var(--signal-negative-subtle)] text-[var(--risk-high)]',
+        medium: 'bg-[var(--signal-warning-subtle)] text-[var(--risk-medium)]',
+        low: 'bg-[var(--signal-positive-subtle)] text-[var(--risk-low)]',
       },
     },
     defaultVariants: {

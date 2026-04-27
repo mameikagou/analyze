@@ -38,7 +38,7 @@ export const Route = createFileRoute('/funds/$code')({
 function FundDetailPage() {
   const { code } = useParams({ from: '/funds/$code' })
   const { data: fund, isLoading: detailLoading, error: detailError } = useFundDetail(code)
-  const { data: chartResponse, isLoading: chartLoading } = useChartData(code, { days: 180 })
+  const { data: chartResponse, isLoading: chartLoading, error: chartError } = useChartData(code, { days: 180 })
   const { toast } = useToast()
 
   const isLoading = detailLoading || chartLoading
@@ -49,7 +49,10 @@ function FundDetailPage() {
     if (detailError) {
       toast({ type: 'error', message: `加载基金数据失败: ${detailError.message}` })
     }
-  }, [detailError, toast])
+    if (chartError) {
+      toast({ type: 'error', message: `加载净值走势失败: ${chartError.message}` })
+    }
+  }, [detailError, chartError, toast])
 
   /* ── 从现有数据计算诊断指标 ──────────────────────────────── */
   const diagnosis = useMemo(() => {
@@ -131,7 +134,7 @@ function FundDetailPage() {
             <div className="flex items-center gap-4">
               <div>
                 <span className="text-xs text-[var(--text-muted)]">最新净值</span>
-                <div className="text-lg font-bold tabular-nums">
+                <div className="text-lg font-semibold tabular-nums">
                   <MetricValue value={fund.latestNav.nav?.toFixed(4) ?? '—'} />
                 </div>
               </div>

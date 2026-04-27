@@ -10,6 +10,7 @@
  */
 
 import { motion } from 'framer-motion'
+import { Surface } from '@/components/design-system/Surface'
 import { presence, transition } from '@/styles/tokens.animation'
 import type { Holding } from '@/hooks/api'
 
@@ -20,9 +21,9 @@ interface HoldingsListProps {
 export function HoldingsList({ holdings }: HoldingsListProps) {
   if (holdings.length === 0) {
     return (
-      <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 text-center">
+      <Surface bordered rounded="lg" className="p-6 text-center">
         <p className="text-sm text-[var(--text-muted)]">暂无持仓数据</p>
-      </div>
+      </Surface>
     )
   }
 
@@ -35,7 +36,7 @@ export function HoldingsList({ holdings }: HoldingsListProps) {
   const maxWeight = sorted[0]?.weightPct ?? 1
 
   return (
-    <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] overflow-hidden">
+    <Surface bordered rounded="lg" className="overflow-hidden">
       <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
         <h3 className="text-sm font-semibold text-[var(--text-primary)]">
           持仓明细（{holdings.length} 只）
@@ -75,7 +76,7 @@ export function HoldingsList({ holdings }: HoldingsListProps) {
             {/* 权重进度条 */}
             <div className="ml-7 h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
               <motion.div
-                className="h-full rounded-full bg-[var(--accent-primary)]"
+                className="h-full rounded-full bg-[var(--signal-neutral)]"
                 initial={{ width: 0 }}
                 animate={{ width: `${((holding.weightPct ?? 0) / maxWeight) * 100}%` }}
                 transition={{ duration: 0.5, ease: [0, 0, 0.2, 1] }}
@@ -84,6 +85,6 @@ export function HoldingsList({ holdings }: HoldingsListProps) {
           </motion.div>
         ))}
       </div>
-    </div>
+    </Surface>
   )
 }

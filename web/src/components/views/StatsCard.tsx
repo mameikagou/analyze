@@ -64,9 +64,9 @@ function SparklineSVG({
 
   const strokeColor =
     trend === 'up'
-      ? 'var(--accent-success)'
+      ? 'var(--signal-positive)'
       : trend === 'down'
-        ? 'var(--accent-error)'
+        ? 'var(--signal-negative)'
         : 'var(--text-muted)'
 
   return (
@@ -102,9 +102,9 @@ export function StatsCard({
 
   const trendColor =
     trend === 'up'
-      ? 'text-[var(--accent-success)]'
+      ? 'text-[var(--signal-positive)]'
       : trend === 'down'
-        ? 'text-[var(--accent-error)]'
+        ? 'text-[var(--signal-negative)]'
         : 'text-[var(--text-muted)]'
 
   return (
@@ -124,7 +124,7 @@ export function StatsCard({
             {Icon && <Icon className="h-4 w-4 text-[var(--text-muted)]" />}
             <p className="text-sm font-medium text-[var(--text-muted)]">{title}</p>
           </div>
-          <p className="text-2xl font-bold tabular-nums tracking-tight text-[var(--text-primary)]">
+          <p className="text-2xl font-semibold tabular-nums tracking-tight text-[var(--text-primary)]">
             {value}
           </p>
         </div>

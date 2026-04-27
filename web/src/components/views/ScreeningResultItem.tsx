@@ -71,8 +71,8 @@ export function ScreeningResultItem({ item, onClick }: ScreeningResultItemProps)
             <span
               className={`text-xs font-mono tabular-nums ${
                 item.dailyChangePct >= 0
-                  ? 'text-[var(--accent-success)]'
-                  : 'text-[var(--accent-error)]'
+                  ? 'text-[var(--signal-positive)]'
+                  : 'text-[var(--signal-negative)]'
               }`}
             >
               {item.dailyChangePct >= 0 ? '+' : ''}

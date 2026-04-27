@@ -27,58 +27,68 @@ import type { FundSummary } from '@/hooks/api'
 interface FundTableProps {
   funds: FundSummary[]
   onRowClick?: (code: string) => void
+  /**
+   * 为 true 时不渲染 Surface 外壳，用于被 ArchiveTable 等外层容器包裹的场景。
+   * @default false
+   */
+  unstyled?: boolean
 }
 
-export function FundTable({ funds, onRowClick }: FundTableProps) {
+function TableContent({ funds, onRowClick }: FundTableProps) {
   if (funds.length === 0) {
     return (
-      <Surface
-        variant="surface"
-        bordered
-        rounded="lg"
-        className="flex h-48 items-center justify-center"
-      >
+      <div className="flex h-48 items-center justify-center">
         <p className="text-sm text-[var(--text-muted)]">暂无数据</p>
-      </Surface>
+      </div>
     )
   }
 
   return (
-    <Surface variant="surface" bordered rounded="lg" className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[120px] text-[var(--text-muted)]">基金代码</TableHead>
-              <TableHead className="text-[var(--text-muted)]">基金名称</TableHead>
-              <TableHead className="w-[80px] text-[var(--text-muted)]">市场</TableHead>
-              <TableHead className="w-[60px] text-right text-[var(--text-muted)]">操作</TableHead>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-[120px] text-[var(--text-muted)]">基金代码</TableHead>
+            <TableHead className="text-[var(--text-muted)]">基金名称</TableHead>
+            <TableHead className="w-[80px] text-[var(--text-muted)]">市场</TableHead>
+            <TableHead className="w-[60px] text-right text-[var(--text-muted)]">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {funds.map((fund) => (
+            <TableRow
+              key={fund.code}
+              className="cursor-pointer group"
+              onClick={() => onRowClick?.(fund.code)}
+            >
+              <TableCell className="font-mono text-sm text-[var(--text-primary)]">
+                {fund.code}
+              </TableCell>
+              <TableCell className="text-sm text-[var(--text-secondary)] max-w-[300px] truncate">
+                {fund.name}
+              </TableCell>
+              <TableCell>
+                <MarketBadge market={fund.market} />
+              </TableCell>
+              <TableCell className="text-right">
+                <ExternalLink className="inline-block h-3.5 w-3.5 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {funds.map((fund) => (
-              <TableRow
-                key={fund.code}
-                className="cursor-pointer group"
-                onClick={() => onRowClick?.(fund.code)}
-              >
-                <TableCell className="font-mono text-sm text-[var(--text-primary)]">
-                  {fund.code}
-                </TableCell>
-                <TableCell className="text-sm text-[var(--text-secondary)] max-w-[300px] truncate">
-                  {fund.name}
-                </TableCell>
-                <TableCell>
-                  <MarketBadge market={fund.market} />
-                </TableCell>
-                <TableCell className="text-right">
-                  <ExternalLink className="inline-block h-3.5 w-3.5 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
+export function FundTable({ funds, onRowClick, unstyled }: FundTableProps) {
+  if (unstyled) {
+    return <TableContent funds={funds} onRowClick={onRowClick} />
+  }
+
+  return (
+    <Surface variant="surface" bordered rounded="lg" className="overflow-hidden">
+      <TableContent funds={funds} onRowClick={onRowClick} />
     </Surface>
   )
 }

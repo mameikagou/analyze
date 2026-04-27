@@ -27,6 +27,7 @@ import {
   LineStyle,
   CrosshairMode,
 } from 'lightweight-charts'
+import { Surface } from '@/components/design-system/Surface'
 import type { ChartPoint } from '@/hooks/api'
 
 interface ChartContainerProps {
@@ -178,21 +179,24 @@ export function ChartContainer({
 
   if (data.length === 0) {
     return (
-      <div
-        className="flex items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
+      <Surface
+        bordered
+        rounded="lg"
+        className="flex items-center justify-center"
         style={{ height }}
       >
         <p className="text-sm text-[var(--text-muted)]">暂无图表数据</p>
-      </div>
+      </Surface>
     )
   }
 
   return (
-    <div
+    <Surface
       ref={containerRef}
-      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
+      bordered
+      rounded="lg"
+      className="w-full"
       data-market={market?.toLowerCase() === 'cn' ? 'cn' : undefined}
-      style={{ width: '100%' }}
     />
   )
 }
